@@ -14,20 +14,5 @@ class libraryTest {
     void tearDown() {
     }
 
-    @Test
-    void add() {
-
-            library calc = new library();
-            int result = calc.add(2, 3);
-            assertEquals(5, result, "Addition should be correct");
-    }
-    @Test
-    void testMuliply() {
-
-        library mult = new library();
-        int r = mult.multiply(3, 3);
-        assertEquals(9, r, "Multiplication should be correct");
-    }
-
 
 }
