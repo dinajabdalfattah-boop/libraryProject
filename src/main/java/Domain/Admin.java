@@ -1,3 +1,5 @@
+package Domain;
+
 public class Admin {
     private String userName;
     private int adminId;
