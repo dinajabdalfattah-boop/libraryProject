@@ -3,17 +3,13 @@ package domain;
 import java.time.LocalDate;
 
 public class Book {
-    // Attributes
     private final String title;
     private final String author;
     private final String isbn;
     private boolean available;
-
-    // Borrowing info
     private LocalDate borrowDate;
     private LocalDate dueDate;
 
-    // Constructor
     public Book(String title, String author, String isbn) {
         this.title = title;
         this.author = author;
@@ -21,38 +17,43 @@ public class Book {
         this.available = true;
     }
 
+    public boolean isAvailable() {
+        return available;
+    }
 
-    // When user borrows a book
-    public void borrowBook() {
+    // Borrow book with optional date (for testing)
+    public void borrowBook(LocalDate borrowDate) {
         if (!available) {
-            System.out.println("This book is already borrowed!");
-            return;
+            throw new IllegalStateException("Book is already borrowed!");
         }
-        this.available = false;
-        this.borrowDate = LocalDate.now();
-        this.dueDate = borrowDate.plusDays(28); // due after 28 days
-        System.out.println("Book borrowed successfully. Due date: " + dueDate);
+        available = false;
+        this.borrowDate = borrowDate;
+        this.dueDate = borrowDate.plusDays(28);
     }
 
-    // When user returns the book
+    // Borrow book using current date
+    public void borrowBook() {
+        borrowBook(LocalDate.now());
+    }
+
     public void returnBook() {
-        this.available = true;
-        this.borrowDate = null;
-        this.dueDate = null;
-        System.out.println("Book returned successfully.");
+        available = true;
+        borrowDate = null;
+        dueDate = null;
     }
 
-    // Check if the book is overdue
+    // Check overdue with optional current date
+    public boolean isOverdue(LocalDate currentDate) {
+        return dueDate != null && currentDate.isAfter(dueDate);
+    }
+
     public boolean isOverdue() {
-        if (dueDate == null) {
-            return false; // Not borrowed
-        }
-        return LocalDate.now().isAfter(dueDate);
+        return isOverdue(LocalDate.now());
     }
 
-    // --- Getters & Setters ---
-    public void setAvailable(boolean available) {
-        this.available = available;
+    // Getters
+    public LocalDate getDueDate() {
+        return dueDate;
     }
 
     public String getTitle() {
@@ -67,21 +68,17 @@ public class Book {
         return isbn;
     }
 
-    public boolean isAvailable() {
-        return available;
+    @Override
+    public String toString() {
+        String status = available ? "Available" : "Not Available (Due: " + dueDate + ")";
+        return "Title: " + title + ", Author: " + author + ", ISBN: " + isbn + ", Status: " + status;
     }
 
+    public boolean isBorrowed() {
+        return !available;
+    }
     public LocalDate getBorrowDate() {
         return borrowDate;
     }
 
-    public LocalDate getDueDate() {
-        return dueDate;
-    }
-
-    @Override
-    public String toString() {
-        String status = available ? "Available" : "Borrowed (Due: " + dueDate + ")";
-        return "Title: " + title + ", Author: " + author + ", ISBN: " + isbn + ", Status: " + status;
-    }
 }
