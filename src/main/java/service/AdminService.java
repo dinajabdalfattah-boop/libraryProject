@@ -39,7 +39,7 @@ public class AdminService {
         return false;
     }
 
-    // عملية تسجيل الخروج
+
     public void logout() {
         if (loggedInAdmin == null) {
             System.out.println(" No admin is currently logged in.");
