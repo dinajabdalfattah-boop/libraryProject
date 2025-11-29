@@ -7,9 +7,6 @@ import domain.User;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Service layer responsible for managing library operations.
- */
 public class LibraryService {
 
     private final List<Book> books = new ArrayList<>();
@@ -17,42 +14,41 @@ public class LibraryService {
     private final List<User> users = new ArrayList<>();
     private final ReminderService reminderService;
 
-    // ربط LibraryService مع ReminderService
     public LibraryService(ReminderService reminderService) {
         this.reminderService = reminderService;
     }
 
-    /**
-     * إضافة كتاب جديد إلى المكتبة
-     */
-    public void addBook(Book book) {
+    public boolean addBook(Book book) {
+        for (Book b : books) {
+            if (b.getIsbn().equals(book.getIsbn())) {
+                return false;
+            }
+        }
         books.add(book);
+        return true;
     }
 
-    /**
-     * إضافة مستخدم جديد
-     */
-    public void addUser(User user) {
+    public boolean addUser(User user) {
+        for (User u : users) {
+            if (u.getUserName().equals(user.getUserName())) {
+                return false;
+            }
+        }
         users.add(user);
+        return true;
     }
 
-    /**
-     * السماح للمستخدم باستعارة كتاب مع التحقق من قواعد Sprint 4
-     */
-    public void borrowBook(User user, Book book) {
+    public boolean borrowBook(User user, Book book) {
         try {
-            user.borrowBook(book); // يتحقق من القواعد (overdue books, unpaid fines)
+            user.borrowBook(book);
             Loan loan = new Loan(user, book);
             loans.add(loan);
-            System.out.println(user.getUserName() + " borrowed '" + book.getTitle() + "'");
+            return true;
         } catch (IllegalStateException e) {
-            System.out.println("Cannot borrow book: " + e.getMessage());
+            return false;
         }
     }
 
-    /**
-     * استرجاع قائمة القروض المتأخرة
-     */
     public List<Loan> getOverdueLoans() {
         List<Loan> overdue = new ArrayList<>();
         for (Loan loan : loans) {
@@ -63,48 +59,33 @@ public class LibraryService {
         return overdue;
     }
 
-    /**
-     * إرسال تذكيرات للقروض المتأخرة باستخدام ReminderService
-     */
     public void sendOverdueReminders() {
         List<Loan> overdueLoans = getOverdueLoans();
         reminderService.sendReminders(overdueLoans);
     }
 
-    /**
-     * إلغاء تسجيل المستخدم بعد التحقق من القروض النشطة والغرامات
-     */
-    public void unregisterUser(User user) {
-        if (users.contains(user)) {
-            if (user.canBeUnregistered()) {
-                users.remove(user);
-                System.out.println("User " + user.getUserName() + " unregistered successfully.");
-            } else {
-                System.out.println("Cannot unregister user " + user.getUserName() +
-                        ": has active loans or unpaid fines.");
-            }
-        } else {
-            System.out.println("User " + user.getUserName() + " not found.");
+    // Unregister user (Sprint 4)
+    public boolean unregisterUser(User user) {
+        if (!users.contains(user)) {
+            return false;
         }
+
+        if (!user.canBeUnregistered()) {
+            return false;
+        }
+
+        users.remove(user);
+        return true;
     }
 
-    /**
-     * الحصول على جميع المستخدمين (اختياري)
-     */
     public List<User> getAllUsers() {
         return new ArrayList<>(users);
     }
 
-    /**
-     * الحصول على جميع الكتب (اختياري)
-     */
     public List<Book> getAllBooks() {
         return new ArrayList<>(books);
     }
 
-    /**
-     * الحصول على جميع القروض (اختياري)
-     */
     public List<Loan> getAllLoans() {
         return new ArrayList<>(loans);
     }

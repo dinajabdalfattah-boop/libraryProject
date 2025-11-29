@@ -2,7 +2,7 @@ package domain;
 
 public class Admin {
     private String userName;
-    private int adminId;
+    private final int adminId;
     private String password;
 
     public Admin(String userName, int adminId, String password) {
@@ -27,10 +27,6 @@ public class Admin {
     // Setters
     public void setUserName(String userName) {
         this.userName = userName;
-    }
-
-    public void setAdminId(int adminId) {
-        this.adminId = adminId;
     }
 
     public void setPassword(String password) {

@@ -1,5 +1,6 @@
 package service;
 
+import domain.Admin;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -9,83 +10,100 @@ public class AdminServiceTest {
 
     private AdminService adminService;
 
+    private String name1;
+    private String pass1;
+    private int id1;
+
+    private String name2;
+    private String pass2;
+    private int id2;
+
     @BeforeEach
     public void setUp() {
         adminService = new AdminService();
+
+        name1 = "AdminA";
+        pass1 = "PassA";
+        id1 = 100;
+
+        name2 = "AdminB";
+        pass2 = "PassB";
+        id2 = 200;
     }
 
-    // ======== Test adding admin when list is empty ========
     @Test
-    public void testAddAdminWhenListEmpty() {
-        adminService.addAdmin("adminUser", 1, "password123");
-        assertTrue(adminService.login("adminUser", "password123"));
+    public void testAddAdminAndLogin() {
+        adminService.addAdmin(name1, id1, pass1);
+
+        assertTrue(adminService.login(name1, pass1));
         assertTrue(adminService.isAdminLoggedIn());
     }
 
-    // ======== Test adding duplicate Admin ID ========
     @Test
-    public void testAddAdminDuplicateId() {
-        adminService.addAdmin("adminUser", 1, "password123");
-        adminService.addAdmin("anotherAdmin", 1, "pass123"); // duplicate
-        // Login with duplicate should fail
-        boolean loginDuplicate = adminService.login("anotherAdmin", "pass123");
-        assertFalse(loginDuplicate);
-        // Original admin still works
-        assertTrue(adminService.login("adminUser", "password123"));
+    public void testAddDuplicateAdminIdFails() {
+        adminService.addAdmin(name1, id1, pass1);
+        adminService.addAdmin(name2, id1, pass2);
+
+        assertFalse(adminService.login(name2, pass2));
+
+        // original admin still works
+        assertTrue(adminService.login(name1, pass1));
     }
 
-    // ======== Test successful login ========
     @Test
     public void testLoginSuccess() {
-        adminService.addAdmin("adminUser", 1, "password123");
-        boolean result = adminService.login("adminUser", "password123");
-        assertTrue(result);
-        assertTrue(adminService.isAdminLoggedIn());
+        adminService.addAdmin(name1, id1, pass1);
+        assertTrue(adminService.login(name1, pass1));
     }
 
-    // ======== Test failed login (wrong credentials) ========
     @Test
-    public void testLoginFailWrongCredentials() {
-        adminService.addAdmin("adminUser", 1, "password123");
-        boolean result = adminService.login("wrongUser", "password123");
-        assertFalse(result);
-        assertFalse(adminService.isAdminLoggedIn());
+    public void testLoginWrongPassword() {
+        adminService.addAdmin(name1, id1, pass1);
+        assertFalse(adminService.login(name1, "WrongPass"));
     }
 
-    // ======== Test login when already logged in ========
+    @Test
+    public void testLoginWrongUsername() {
+        adminService.addAdmin(name1, id1, pass1);
+        assertFalse(adminService.login("Unknown", pass1));
+    }
+
     @Test
     public void testLoginWhenAlreadyLoggedIn() {
-        adminService.addAdmin("adminUser", 1, "password123");
-        // First login
-        assertTrue(adminService.login("adminUser", "password123"));
-        // Attempt second login while already logged in
-        boolean result = adminService.login("adminUser", "password123");
-        assertFalse(result);
+        adminService.addAdmin(name1, id1, pass1);
+        assertTrue(adminService.login(name1, pass1));
+
+        assertFalse(adminService.login(name1, pass1));
         assertTrue(adminService.isAdminLoggedIn());
     }
 
-    // ======== Test logout when admin is logged in ========
     @Test
-    public void testLogoutWhenAdminLoggedIn() {
-        adminService.addAdmin("adminUser", 1, "password123");
-        adminService.login("adminUser", "password123");
-        assertTrue(adminService.isAdminLoggedIn());
+    public void testLogout() {
+        adminService.addAdmin(name1, id1, pass1);
+        adminService.login(name1, pass1);
+
         adminService.logout();
         assertFalse(adminService.isAdminLoggedIn());
     }
 
-    // ======== Test logout when no admin is logged in ========
     @Test
-    public void testLogoutWhenNoAdminLoggedIn() {
-        // logout without login
+    public void testLogoutWhenNotLoggedIn() {
         adminService.logout();
         assertFalse(adminService.isAdminLoggedIn());
     }
 
-    // ======== Test show all admins (visual check) ========
     @Test
-    public void testShowAllAdmins() {
-        adminService.addAdmin("adminUser", 1, "password123");
-        adminService.showAllAdmins(); // output should show one admin
+    public void testIsAdminLoggedInDefaultFalse() {
+        assertFalse(adminService.isAdminLoggedIn());
+    }
+
+    @Test
+    public void testGetLoggedInAdmin() {
+        adminService.addAdmin(name1, id1, pass1);
+        adminService.login(name1, pass1);
+
+        Admin loggedIn = adminService.getLoggedInAdmin();
+        assertNotNull(loggedIn);
+        assertEquals(name1, loggedIn.getUserName());
     }
 }

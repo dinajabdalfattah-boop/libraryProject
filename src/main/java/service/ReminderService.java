@@ -7,23 +7,27 @@ import notification.Observer;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Service responsible for sending reminders to users with overdue books.
- */
 public class ReminderService {
 
     private final List<Observer> observers = new ArrayList<>();
 
-    public void addObserver(Observer observer) {
+    public boolean addObserver(Observer observer) {
+        if (observers.contains(observer)) {
+            return false;
+        }
         observers.add(observer);
+        return true;
     }
 
-    public void sendReminders(List<Loan> overdueLoans) {
+    public boolean sendReminders(List<Loan> overdueLoans) {
+        if (overdueLoans.isEmpty()) return false;
+
         for (Loan loan : overdueLoans) {
             User user = loan.getUser();
             String message = "You have " + user.getOverdueCount() + " overdue book(s).";
             notifyObservers(user, message);
         }
+        return true;
     }
 
     private void notifyObservers(User user, String message) {

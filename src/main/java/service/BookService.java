@@ -1,84 +1,72 @@
 package service;
 
 import domain.Book;
-
-import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.List;
 
 public class BookService {
-    private final ArrayList<Book> books = new ArrayList<>();
 
-    public void addBook(String title, String author, String isbn) {
+    private final List<Book> books = new ArrayList<>();
+
+    public boolean addBook(String title, String author, String isbn) {
         for (Book b : books) {
             if (b.getIsbn().equals(isbn)) {
-                System.out.println("Book with this ISBN already exists: " + isbn);
-                return;
+                return false;
             }
         }
         Book newBook = new Book(title, author, isbn);
         books.add(newBook);
-        System.out.println("Book added successfully: " + newBook);
+        return true;
     }
 
-    public void searchBook(String key) {
-        boolean found = false;
+    public List<Book> searchBook(String key) {
+        List<Book> results = new ArrayList<>();
+
         for (Book b : books) {
             if (b.getTitle().toLowerCase().contains(key.toLowerCase()) ||
                     b.getAuthor().toLowerCase().contains(key.toLowerCase()) ||
                     b.getIsbn().contains(key)) {
-                System.out.println("Match found: " + b);
-                found = true;
+
+                results.add(b);
             }
         }
-        if(!found) {
-            System.out.println("No book found with this key: " + key);
-        }
+        return results;
     }
 
-    public void showAllBooks() {
-        if (books.isEmpty()) {
-            System.out.println("No books in the library yet.");
-        } else {
-            System.out.println("All Books:");
-            for (Book b : books) {
-                System.out.println(b);
-            }
-        }
+    public List<Book> getAllBooks() {
+        return books;
     }
 
     // ---------------- Sprint 2 methods ----------------
 
-    public void borrowBook(String isbn) {
+    public boolean borrowBook(String isbn) {
         Book book = findBookByISBN(isbn);
-        if (book == null) {
-            System.out.println("Book not found: " + isbn);
-            return;
-        }
+        if (book == null) return false;
+
         try {
             book.borrowBook();
-            System.out.println("Book borrowed successfully: " + book.getTitle() + " Due: " + book.getDueDate());
+            return true;
         } catch (IllegalStateException e) {
-            System.out.println(e.getMessage());
+            return false;
         }
     }
 
-    public void returnBook(String isbn) {
+    public boolean returnBook(String isbn) {
         Book book = findBookByISBN(isbn);
-        if (book == null) {
-            System.out.println("Book not found: " + isbn);
-            return;
-        }
+        if (book == null) return false;
+
         book.returnBook();
-        System.out.println("Book returned successfully: " + book.getTitle());
+        return true;
     }
 
     public boolean isBookOverdue(String isbn) {
         Book book = findBookByISBN(isbn);
         if (book == null) return false;
+
         return book.isOverdue();
     }
 
-     Book findBookByISBN(String isbn) {
+    public Book findBookByISBN(String isbn) {
         for (Book b : books) {
             if (b.getIsbn().equals(isbn)) return b;
         }

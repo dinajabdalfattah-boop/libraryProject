@@ -36,11 +36,11 @@ public class library {
 
         System.out.println("\n--- Scenario 1: User has overdue books ---");
         book1.borrowBook(LocalDate.now().minusDays(30));
-        user1.getBorrowedBooks().add(book1); // إضافة يدوياً للقائمة
+        user1.getBorrowedBooks().add(book1);
         libraryService.borrowBook(user1, book2);
 
         System.out.println("\n--- Scenario 2: User has unpaid fines ---");
-        user2.setFineBalance(50); // غرامة غير مدفوعة
+        user2.setFineBalance(50);
         libraryService.borrowBook(user2, book3);
 
         System.out.println("\n--- Scenario 3: Unregister user with active loans or fines ---");
@@ -48,7 +48,7 @@ public class library {
         libraryService.unregisterUser(user2);
 
         System.out.println("\n--- Scenario 4: Unregister user allowed ---");
-        libraryService.unregisterUser(user3); // لا يوجد قروض أو غرامات
+        libraryService.unregisterUser(user3);
 
         System.out.println("\n--- Sending overdue reminders ---");
         libraryService.sendOverdueReminders();
