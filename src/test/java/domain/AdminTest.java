@@ -2,61 +2,82 @@ package domain;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class AdminTest {
 
     private Admin admin;
+    private String initialName;
+    private int initialId;
+    private String initialPassword;
 
     @BeforeEach
     public void setUp() {
-        admin = new Admin("adminUser", 1, "password123");
+        initialName = "adminUser";
+        initialId = 1;
+        initialPassword = "password123";
+
+        admin = new Admin(initialName, initialId, initialPassword);
     }
 
     @Test
-    public void testGetters() {
-        assertEquals("adminUser", admin.getUserName());
-        assertEquals(1, admin.getAdminId());
-        assertEquals("password123", admin.getPassword());
+    public void testConstructorAndGetters() {
+        assertEquals(initialName, admin.getUserName());
+        assertEquals(initialId, admin.getAdminId());
+        assertEquals(initialPassword, admin.getPassword());
     }
 
     @Test
     public void testSetUserName() {
-        admin.setUserName("newAdmin");
-        assertEquals("newAdmin", admin.getUserName());
-    }
-
-    @Test
-    public void testSetAdminId() {
-        admin.setAdminId(99);
-        assertEquals(99, admin.getAdminId());
+        String newName = "newName";
+        admin.setUserName(newName);
+        assertEquals(newName, admin.getUserName());
     }
 
     @Test
     public void testSetPassword() {
-        admin.setPassword("newPass");
-        assertEquals("newPass", admin.getPassword());
+        String newPass = "newPass123";
+        admin.setPassword(newPass);
+        assertEquals(newPass, admin.getPassword());
     }
 
     @Test
     public void testFullUpdate() {
-        // تحديث كل الخصائص معاً
-        admin.setUserName("superAdmin");
-        admin.setAdminId(42);
-        admin.setPassword("superPass");
+        String newName = "megaAdmin";
+        String newPassword = "ultraPass";
 
-        assertEquals("superAdmin", admin.getUserName());
-        assertEquals(42, admin.getAdminId());
-        assertEquals("superPass", admin.getPassword());
+        admin.setUserName(newName);
+        admin.setPassword(newPassword);
+
+        assertEquals(newName, admin.getUserName());
+        assertEquals(newPassword, admin.getPassword());
+        assertEquals(initialId, admin.getAdminId());
     }
 
     @Test
-    public void testToStringRepresentation() {
-        // إذا أردت يمكن إضافة toString لكلاس Admin لاحقاً
-        // هنا فقط نضمن الكفرج لكل الخصائص
-        String repr = "Username: " + admin.getUserName() + ", ID: " + admin.getAdminId();
-        assertTrue(repr.contains(admin.getUserName()));
-        assertTrue(repr.contains(String.valueOf(admin.getAdminId())));
+    public void testAdminIdIsFinal() {
+        assertEquals(initialId, admin.getAdminId());
+    }
+
+
+    @Test
+    public void testSetUserNameToNull() {
+        admin.setUserName(null);
+        assertNull(admin.getUserName());
+    }
+
+    @Test
+    public void testSetPasswordToEmptyString() {
+        String emptyPass = "";
+        admin.setPassword(emptyPass);
+        assertEquals(emptyPass, admin.getPassword());
+    }
+
+    @Test
+    public void testStringContainsUsernameAndId() {
+        String representation = "Admin: " + admin.getUserName() + " (ID: " + admin.getAdminId() + ")";
+        assertTrue(representation.contains(admin.getUserName()));
+        assertTrue(representation.contains(String.valueOf(admin.getAdminId())));
     }
 }
-

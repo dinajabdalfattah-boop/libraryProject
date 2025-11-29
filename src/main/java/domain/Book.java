@@ -3,9 +3,11 @@ package domain;
 import java.time.LocalDate;
 
 public class Book {
+
     private final String title;
     private final String author;
     private final String isbn;
+
     private boolean available;
     private LocalDate borrowDate;
     private LocalDate dueDate;
@@ -21,28 +23,25 @@ public class Book {
         return available;
     }
 
-    // Borrow book with optional date (for testing)
     public void borrowBook(LocalDate borrowDate) {
-        if (!available) {
+        if (!available)
             throw new IllegalStateException("Book is already borrowed!");
-        }
-        available = false;
+
+        this.available = false;
         this.borrowDate = borrowDate;
         this.dueDate = borrowDate.plusDays(28);
     }
 
-    // Borrow book using current date
     public void borrowBook() {
         borrowBook(LocalDate.now());
     }
 
     public void returnBook() {
-        available = true;
-        borrowDate = null;
-        dueDate = null;
+        this.available = true;
+        this.borrowDate = null;
+        this.dueDate = null;
     }
 
-    // Check overdue with optional current date
     public boolean isOverdue(LocalDate currentDate) {
         return dueDate != null && currentDate.isAfter(dueDate);
     }
@@ -51,9 +50,12 @@ public class Book {
         return isOverdue(LocalDate.now());
     }
 
-    // Getters
     public LocalDate getDueDate() {
         return dueDate;
+    }
+
+    public LocalDate getBorrowDate() {
+        return borrowDate;
     }
 
     public String getTitle() {
@@ -68,17 +70,29 @@ public class Book {
         return isbn;
     }
 
-    @Override
-    public String toString() {
-        String status = available ? "Available" : "Not Available (Due: " + dueDate + ")";
-        return "Title: " + title + ", Author: " + author + ", ISBN: " + isbn + ", Status: " + status;
-    }
-
     public boolean isBorrowed() {
         return !available;
     }
-    public LocalDate getBorrowDate() {
-        return borrowDate;
+
+    // ------------ SETTERS USED FOR LOADING FROM FILE ------------
+
+    public void setAvailable(boolean available) {
+        this.available = available;
     }
 
+    public void setBorrowDate(LocalDate borrowDate) {
+        this.borrowDate = borrowDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "Book[%s by %s, ISBN=%s, Available=%s, BorrowDate=%s, DueDate=%s]",
+                title, author, isbn, available, borrowDate, dueDate
+        );
+    }
 }

@@ -4,8 +4,6 @@ import domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -13,95 +11,88 @@ import static org.junit.jupiter.api.Assertions.*;
 public class UserServiceTest {
 
     private UserService userService;
-    private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
-    private final PrintStream originalOut = System.out;
+
+    private String name1;
+    private String name2;
 
     @BeforeEach
     public void setUp() {
         userService = new UserService();
-        System.setOut(new PrintStream(outContent));
-    }
 
-    private void resetOutput() { outContent.reset(); }
+        name1 = "UserA";
+        name2 = "UserB";
+    }
 
     @Test
     public void testAddUserSuccess() {
-        userService.addUser("Alice");
-        String output = outContent.toString();
-        assertTrue(output.contains("User added successfully"));
-        User user = userService.findUserByName("Alice");
-        assertNotNull(user);
-        resetOutput();
+        assertTrue(userService.addUser(name1));
+
+        User u = userService.findUserByName(name1);
+        assertNotNull(u);
+        assertEquals(name1, u.getUserName());
     }
 
     @Test
-    public void testFindUserByNameExists() {
-        userService.addUser("Bob");
-        resetOutput();
-        User user = userService.findUserByName("Bob");
-        assertNotNull(user);
-        resetOutput();
+    public void testAddUserDuplicateFails() {
+        assertTrue(userService.addUser(name1));
+        assertFalse(userService.addUser(name1));
+
+        List<User> all = userService.getAllUsers();
+        assertEquals(1, all.size());
     }
 
     @Test
-    public void testFindUserByNameNotExists() {
-        User user = userService.findUserByName("Nonexistent");
-        assertNull(user);
-        assertTrue(outContent.toString().contains("User not found"));
-        resetOutput();
+    public void testFindUserExists() {
+        userService.addUser(name1);
+        User u = userService.findUserByName(name1);
+        assertNotNull(u);
+    }
+
+    @Test
+    public void testFindUserNotExists() {
+        assertNull(userService.findUserByName("Unknown"));
+    }
+
+    @Test
+    public void testGetAllUsersEmpty() {
+        assertTrue(userService.getAllUsers().isEmpty());
+    }
+
+    @Test
+    public void testGetAllUsersNonEmpty() {
+        userService.addUser(name1);
+        userService.addUser(name2);
+        assertEquals(2, userService.getAllUsers().size());
     }
 
     @Test
     public void testCanBorrowNoFine() {
-        userService.addUser("Charlie");
-        User user = userService.findUserByName("Charlie");
-        assertTrue(userService.canBorrow(user));
-        resetOutput();
+        userService.addUser(name1);
+        User u = userService.findUserByName(name1);
+        assertTrue(userService.canBorrow(u));
     }
 
     @Test
     public void testCanBorrowWithFine() {
-        userService.addUser("David");
-        User user = userService.findUserByName("David");
-        user.setFineBalance(20.0);
-        assertFalse(userService.canBorrow(user));
-        assertTrue(outContent.toString().contains("cannot borrow books"));
-        resetOutput();
+        userService.addUser(name1);
+        User u = userService.findUserByName(name1);
+        u.setFineBalance(20);
+
+        assertFalse(userService.canBorrow(u));
     }
 
     @Test
-    public void testShowAllUsersEmpty() {
-        userService.showAllUsers();
-        assertTrue(outContent.toString().contains("No users found"));
-        resetOutput();
-    }
+    public void testMultipleUsersBorrowLogic() {
+        userService.addUser(name1);
+        userService.addUser(name2);
 
-    @Test
-    public void testShowAllUsersNonEmpty() {
-        userService.addUser("Eve");
-        resetOutput();
-        userService.showAllUsers();
-        String output = outContent.toString();
-        assertTrue(output.contains("All Users") && output.contains("Eve"));
-        resetOutput();
-    }
+        User u1 = userService.findUserByName(name1);
+        User u2 = userService.findUserByName(name2);
 
-    @Test
-    public void testMultipleUsersAndFines() {
-        userService.addUser("Frank");
-        userService.addUser("Grace");
-        User frank = userService.findUserByName("Frank");
-        User grace = userService.findUserByName("Grace");
-        frank.setFineBalance(10);
-        grace.setFineBalance(0);
+        u1.setFineBalance(10);
+        u2.setFineBalance(0);
 
-        List<User> users = List.of(frank, grace);
-        for (User u : users) {
-            if (u.getFineBalance() > 0) {
-                assertFalse(userService.canBorrow(u));
-            } else {
-                assertTrue(userService.canBorrow(u));
-            }
-        }
+        assertFalse(userService.canBorrow(u1));
+        assertTrue(userService.canBorrow(u2));
     }
 }

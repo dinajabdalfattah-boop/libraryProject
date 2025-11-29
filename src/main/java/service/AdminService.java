@@ -1,70 +1,94 @@
 package service;
-import domain.Admin;
-import java.util.ArrayList;
 
+import domain.Admin;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Service for handling administrator authentication and management.
+ * Covers:
+ * - Adding admin accounts
+ * - Login / logout operations
+ * - Fetching admin information
+ *
+ * Supports US1.1 (Admin login) and US1.2 (Admin logout)
+ */
 public class AdminService {
 
+    /** List of all registered admins */
+    private final List<Admin> admins = new ArrayList<>();
 
-    private final ArrayList<Admin> admins = new ArrayList<>();
-
-
+    /** Currently logged-in admin (null if none) */
     private Admin loggedInAdmin = null;
 
-    public void addAdmin(String userName, int adminId, String password) {
+    /**
+     * Adds a new admin if the ID is unique.
+     *
+     * @param userName admin username
+     * @param adminId unique admin ID
+     * @param password admin password
+     * @return true if added, false if ID is duplicate
+     */
+    public boolean addAdmin(String userName, int adminId, String password) {
         for (Admin a : admins) {
             if (a.getAdminId() == adminId) {
-                System.out.println(" Admin with ID " + adminId + " already exists!");
-                return;
+                return false;
             }
         }
-        Admin newAdmin = new Admin(userName, adminId, password);
-        admins.add(newAdmin);
-        System.out.println(" Admin added successfully: " + userName);
+        admins.add(new Admin(userName, adminId, password));
+        return true;
     }
 
+    /**
+     * Attempts to log in an administrator.
+     * Only one admin may be logged in at a time.
+     *
+     * @param userName admin username
+     * @param password admin password
+     * @return true if login successful, false otherwise
+     */
     public boolean login(String userName, String password) {
         if (loggedInAdmin != null) {
-            System.out.println(" An admin is already logged in: " + loggedInAdmin.getUserName());
             return false;
         }
 
         for (Admin a : admins) {
-            if (a.getUserName().equals(userName) && a.getPassword().equals(password)) {
+            if (a.getUserName().equals(userName) &&
+                    a.getPassword().equals(password)) {
                 loggedInAdmin = a;
-                System.out.println(" Login successful. Welcome, " + a.getUserName() + "!");
                 return true;
             }
         }
-        System.out.println(" Invalid username or password!");
+
         return false;
     }
 
-
+    /**
+     * Logs out the currently logged-in admin.
+     */
     public void logout() {
-        if (loggedInAdmin == null) {
-            System.out.println(" No admin is currently logged in.");
-        } else {
-            System.out.println(" Admin " + loggedInAdmin.getUserName() + " logged out successfully.");
-            loggedInAdmin = null;
-        }
+        loggedInAdmin = null;
     }
 
+    /**
+     * @return true if an admin is logged in
+     */
     public boolean isAdminLoggedIn() {
         return loggedInAdmin != null;
     }
 
+    /**
+     * @return the currently logged-in admin, or null if none
+     */
     public Admin getLoggedInAdmin() {
         return loggedInAdmin;
     }
 
-    public void showAllAdmins() {
-        if (admins.isEmpty()) {
-            System.out.println(" No admins in the system yet.");
-        } else {
-            System.out.println(" All Admins:");
-            for (Admin a : admins) {
-                System.out.println(" ID: " + a.getAdminId() + " , Username: " + a.getUserName());
-            }
-        }
+    /**
+     * @return list of all registered admins
+     */
+    public List<Admin> getAllAdmins() {
+        return admins;
     }
 }

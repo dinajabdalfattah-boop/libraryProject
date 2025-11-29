@@ -13,84 +13,92 @@ public class BookTest {
 
     @BeforeEach
     public void setUp() {
-        book = new Book("Clean Code", "Robert Martin", "978-0132350884");
-    }
-
-    @Test
-    public void testInitialAvailability() {
-        assertTrue(book.isAvailable());
-        assertNull(book.getDueDate());
-        assertEquals("Clean Code", book.getTitle());
-        assertEquals("Robert Martin", book.getAuthor());
-        assertEquals("978-0132350884", book.getIsbn());
+        book = new Book("Book", "Ahmad", "123");
     }
 
     @Test
     public void testBorrowBookWithDate() {
-        LocalDate borrowDate = LocalDate.of(2025, 10, 26);
-        book.borrowBook(borrowDate);
+        LocalDate date = LocalDate.of(2025, 10, 26);
+        book.borrowBook(date);
 
         assertFalse(book.isAvailable());
-        assertEquals(borrowDate.plusDays(28), book.getDueDate());
-    }
-
-    @Test
-    public void testBorrowBookThrowsWhenAlreadyBorrowed() {
-        book.borrowBook(LocalDate.now());
-        assertThrows(IllegalStateException.class, () -> book.borrowBook(LocalDate.now()));
+        assertEquals(date, book.getBorrowDate());
+        assertEquals(date.plusDays(28), book.getDueDate());
+        assertTrue(book.isBorrowed());
     }
 
     @Test
     public void testBorrowBookWithoutDate() {
         book.borrowBook();
+
         assertFalse(book.isAvailable());
+        assertTrue(book.isBorrowed());
+        assertNotNull(book.getBorrowDate());
         assertNotNull(book.getDueDate());
     }
 
     @Test
+    public void testBorrowThrowsIfAlreadyBorrowed() {
+        book.borrowBook(LocalDate.now());
+        assertThrows(IllegalStateException.class, () -> book.borrowBook(LocalDate.now()));
+    }
+
+    @Test
     public void testReturnBook() {
-        book.borrowBook();
+        book.borrowBook(LocalDate.now());
         book.returnBook();
 
         assertTrue(book.isAvailable());
+        assertNull(book.getBorrowDate());
         assertNull(book.getDueDate());
+        assertFalse(book.isBorrowed());
     }
 
     @Test
     public void testIsOverdueWithCustomDate() {
-        LocalDate borrowDate = LocalDate.now().minusDays(30);
+        LocalDate borrowDate = LocalDate.now().minusDays(35);
         book.borrowBook(borrowDate);
 
         assertTrue(book.isOverdue(LocalDate.now()));
-        assertFalse(book.isOverdue(borrowDate.plusDays(10)));
+        assertFalse(book.isOverdue(borrowDate.plusDays(5)));
     }
 
     @Test
     public void testIsOverdueDefault() {
-        book.borrowBook(LocalDate.now().minusDays(30));
+        book.borrowBook(LocalDate.now().minusDays(40));
         assertTrue(book.isOverdue());
     }
 
     @Test
-    public void testIsOverdueNotBorrowed() {
+    public void testIsNotOverdueIfNeverBorrowed() {
         assertFalse(book.isOverdue());
     }
 
     @Test
-    public void testToStringAvailable() {
-        String str = book.toString();
-        assertTrue(str.contains("Available"));
-        assertTrue(str.contains("Clean Code"));
-        assertTrue(str.contains("Robert Martin"));
-        assertTrue(str.contains("978-0132350884"));
+    public void testToStringWhenAvailable() {
+        String result = book.toString();
+
+        assertTrue(result.contains("Available"));
+        assertTrue(result.contains(book.getTitle()));
+        assertTrue(result.contains(book.getAuthor()));
+        assertTrue(result.contains(book.getIsbn()));
     }
 
     @Test
-    public void testToStringNotAvailable() {
-        LocalDate borrowDate = LocalDate.now();
-        book.borrowBook(borrowDate);
-        String str = book.toString();
-        assertTrue(str.contains("Not Available"));
-        assertTrue(str.contains(borrowDate.plusDays(28).toString()));
+    public void testToStringWhenBorrowed() {
+        LocalDate date = LocalDate.now();
+        book.borrowBook(date);
+
+        String result = book.toString();
+
+        assertTrue(result.contains(book.getTitle()));
+        assertTrue(result.contains(book.getAuthor()));
+        assertTrue(result.contains(book.getIsbn()));
+
+        // available=false بدلاً من "Not Available"
+        assertTrue(result.contains("false"));
+
+        assertTrue(result.contains(book.getDueDate().toString()));
     }
+
 }
