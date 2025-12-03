@@ -111,4 +111,48 @@ public class LoanServiceTest {
         User uFromService = userService.findUserByName("Ahmad");
         assertEquals(1, uFromService.getBorrowedBooks().size());
     }
+
+    // ✅ TESTS ADDED لرفع الكافريج أكثر
+
+    /** يغطي حالة: ما في أي قروض في السيستم */
+    @Test
+    public void testGetAllLoansInitiallyEmpty() {
+        assertTrue(loanService.getAllLoans().isEmpty());
+        assertTrue(loanService.getOverdueLoans().isEmpty());
+    }
+
+    /** يغطي حالة: في قروض لكن ولا واحد متأخر */
+    @Test
+    public void testGetOverdueLoansWhenNoneOverdue() {
+        User u = new User("Mona", "m@m.com");
+        Book b1 = new Book("T3", "A3", "333");
+        Book b2 = new Book("T4", "A4", "444");
+
+        loanService.createLoan(u, b1);
+        loanService.createLoan(u, b2);
+
+        // نخلي كل الـ due في المستقبل
+        for (Loan l : loanService.getAllLoans()) {
+            l.setDueDate(LocalDate.now().plusDays(10));
+        }
+
+        List<Loan> overdue = loanService.getOverdueLoans();
+        assertTrue(overdue.isEmpty());
+    }
+
+    /** يغطي سطر line.isBlank() في loadLoansFromFile + حالة تجاهل كل الأسطر */
+    @Test
+    public void testLoadLoansFromFileWithBlankAndInvalid() {
+        List<String> lines = new ArrayList<>();
+        lines.add(""); // سطر فاضي
+        // user/book مش موجودين → لازم يتجاهلهم
+        lines.add("Ghost,9999,2024-01-01,2024-01-10");
+
+        FileManager.writeLines("src/main/resources/data/loans.txt", lines);
+
+        loanService.loadLoansFromFile();
+
+        // ولا قرض ينضاف لأن user/book غير معروفين
+        assertTrue(loanService.getAllLoans().isEmpty());
+    }
 }

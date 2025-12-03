@@ -3,8 +3,11 @@ package service;
 import domain.Book;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import utils.FileManager;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,6 +36,10 @@ public class BookServiceTest {
         isbn2 = "2222";
     }
 
+    // =====================
+    // ADD BOOK
+    // =====================
+
     @Test
     public void testAddBookSuccess() {
         bookService.addBook(title1, author1, isbn1);
@@ -40,16 +47,30 @@ public class BookServiceTest {
 
         assertNotNull(b);
         assertEquals(title1, b.getTitle());
+        assertEquals(author1, b.getAuthor());
+        assertEquals(isbn1, b.getIsbn());
     }
 
     @Test
     public void testAddBookDuplicateISBN() {
         bookService.addBook(title1, author1, isbn1);
-        bookService.addBook(title2, author2, isbn1);
+        bookService.addBook(title2, author2, isbn1);   // نفس الـ ISBN
 
         assertNotNull(bookService.findBookByISBN(isbn1));
-        assertNull(bookService.findBookByISBN(isbn2));
+        assertNull(bookService.findBookByISBN(isbn2)); // ما ينضاف الثاني
     }
+
+    /** لتغطية فروع التحقق من المدخلات لو موجودة */
+    @Test
+    public void testAddBookWithInvalidData() {
+        assertDoesNotThrow(() -> bookService.addBook(null, author1, isbn1));
+        assertDoesNotThrow(() -> bookService.addBook(title1, null, isbn2));
+        assertDoesNotThrow(() -> bookService.addBook(title2, author2, null));
+    }
+
+    // =====================
+    // BORROW
+    // =====================
 
     @Test
     public void testBorrowBookSuccess() {
@@ -59,6 +80,7 @@ public class BookServiceTest {
         Book b = bookService.findBookByISBN(isbn1);
 
         assertFalse(b.isAvailable());
+        assertTrue(b.isBorrowed());
         assertNotNull(b.getDueDate());
     }
 
@@ -76,9 +98,14 @@ public class BookServiceTest {
 
         assertTrue(b.isBorrowed());
 
+        // محاولة استعارة ثانية لنفس الكتاب
         assertDoesNotThrow(() -> bookService.borrowBook(isbn1));
         assertTrue(b.isBorrowed());
     }
+
+    // =====================
+    // RETURN
+    // =====================
 
     @Test
     public void testReturnBookSuccess() {
@@ -90,6 +117,7 @@ public class BookServiceTest {
         Book b = bookService.findBookByISBN(isbn1);
 
         assertTrue(b.isAvailable());
+        assertFalse(b.isBorrowed());
         assertNull(b.getDueDate());
     }
 
@@ -97,6 +125,26 @@ public class BookServiceTest {
     public void testReturnBookNotFound() {
         assertDoesNotThrow(() -> bookService.returnBook("9999"));
     }
+
+    /** كتاب موجود لكنه مش مستعار → يغطي فرع if (!isBorrowed) في returnBook */
+    @Test
+    public void testReturnBookNotBorrowedButExists() {
+        bookService.addBook(title1, author1, isbn1);
+        Book b = bookService.findBookByISBN(isbn1);
+
+        assertTrue(b.isAvailable());
+        assertFalse(b.isBorrowed());
+
+        assertDoesNotThrow(() -> bookService.returnBook(isbn1));
+
+        assertTrue(b.isAvailable());
+        assertFalse(b.isBorrowed());
+        assertNull(b.getDueDate());
+    }
+
+    // =====================
+    // OVERDUE
+    // =====================
 
     @Test
     public void testIsBookOverdueTrue() {
@@ -107,59 +155,6 @@ public class BookServiceTest {
         b.borrowBook(past);
 
         assertTrue(bookService.isBookOverdue(isbn1));
-    }
-    // كتاب موجود لكنه "مش مستعار" وبتحكي isBookOverdue → لازم false
-    @Test
-    public void testIsBookOverdueBookExistsNotBorrowed() {
-        bookService.addBook(title1, author1, isbn1);
-        Book b = bookService.findBookByISBN(isbn1);
-
-        assertNotNull(b);
-        assertFalse(b.isBorrowed());        // لسه ما استعرناه
-
-        boolean overdue = bookService.isBookOverdue(isbn1);
-
-        assertFalse(overdue);
-    }
-
-    // إرجاع كتاب موجود لكن أصلاً مش مستعار (يغطي if (!isBorrowed) في returnBook)
-    @Test
-    public void testReturnBookNotBorrowedButExists() {
-        bookService.addBook(title1, author1, isbn1);
-        Book b = bookService.findBookByISBN(isbn1);
-
-        assertTrue(b.isAvailable());
-        assertNull(b.getDueDate());
-
-        assertDoesNotThrow(() -> bookService.returnBook(isbn1));
-
-        // يظل متاح وما يتغيّر شيء
-        assertTrue(b.isAvailable());
-        assertNull(b.getDueDate());
-    }
-
-    // searchBook مع نص فاضي "" (يغطي if (query.isEmpty()))
-    @Test
-    public void testSearchBookWithEmptyString() {
-        bookService.addBook(title1, author1, isbn1);
-
-        assertDoesNotThrow(() -> bookService.searchBook(""));
-    }
-
-    // (اختياري) searchBook مع null إذا الميثود عاملة check على null
-    @Test
-    public void testSearchBookWithNull() {
-        bookService.addBook(title1, author1, isbn1);
-
-        assertDoesNotThrow(() -> bookService.searchBook(null));
-    }
-
-    // (اختياري) addBook بمدخلات ناقصة لو الكود عندك بيتجاهلها بدل ما يرمي استثناء
-    @Test
-    public void testAddBookWithInvalidData() {
-        assertDoesNotThrow(() -> bookService.addBook(null, author1, isbn1));
-        assertDoesNotThrow(() -> bookService.addBook(title1, null, isbn2));
-        assertDoesNotThrow(() -> bookService.addBook(title2, author2, null));
     }
 
     @Test
@@ -174,6 +169,74 @@ public class BookServiceTest {
     public void testIsBookOverdueBookNotFound() {
         assertFalse(bookService.isBookOverdue("9999"));
     }
+    @Test
+    public void testLoadBooksFromFile() {
+        // نجهز محتوى ملف الكتب كما يتوقع BookService
+        List<String> lines = new ArrayList<>();
+
+        // سطر فاضي يغطي line.isBlank()
+        lines.add("");
+
+        // كتاب متاح available = true ومع null dates
+        lines.add("T1,A1,111,true,null,null");
+
+        // كتاب غير متاح available = false ومع تواريخ حقيقية (الشرطين يتحققوا)
+        LocalDate borrow1 = LocalDate.of(2024, 1, 1);
+        LocalDate due1    = LocalDate.of(2024, 1, 10);
+        lines.add("T2,A2,222,false," + borrow1 + "," + due1);
+
+        // كتاب غير متاح available = false لكن borrowDate = "null" و dueDate حقيقي
+        LocalDate due2 = LocalDate.of(2024, 2, 1);
+        lines.add("T3,A3,333,false,null," + due2);
+
+        // نكتب الملف في نفس المسار اللي يستخدمه BookService
+        FileManager.writeLines("src/main/resources/data/books.txt", lines);
+
+        // نستدعي الميثود اللي عليها اللون الأحمر
+        bookService.loadBooksFromFile();
+
+        List<Book> all = bookService.getAllBooks();
+        assertEquals(3, all.size());
+
+        // نبحث عن كل كتاب حسب الـ ISBN
+        Book book1 = bookService.findBookByISBN("111");
+        Book book2 = bookService.findBookByISBN("222");
+        Book book3 = bookService.findBookByISBN("333");
+
+        assertNotNull(book1);
+        assertNotNull(book2);
+        assertNotNull(book3);
+
+        // T1: لازم يكون متاح، بدون تواريخ
+        assertTrue(book1.isAvailable());
+        assertNull(book1.getBorrowDate());
+        assertNull(book1.getDueDate());
+
+        // T2: غير متاح، ومع تواريخ borrow & due
+        assertFalse(book2.isAvailable());
+        assertEquals(borrow1, book2.getBorrowDate());
+        assertEquals(due1, book2.getDueDate());
+
+        // T3: غير متاح، borrowDate = null، dueDate فقط
+        assertFalse(book3.isAvailable());
+        assertNull(book3.getBorrowDate());
+        assertEquals(due2, book3.getDueDate());
+    }
+
+    /** كتاب موجود لكن غير مستعار → يغطي فرع !isBorrowed() */
+    @Test
+    public void testIsBookOverdueBookExistsNotBorrowed() {
+        bookService.addBook(title1, author1, isbn1);
+        Book b = bookService.findBookByISBN(isbn1);
+
+        assertNotNull(b);
+        assertFalse(b.isBorrowed());
+        assertFalse(bookService.isBookOverdue(isbn1));
+    }
+
+    // =====================
+    // SEARCH
+    // =====================
 
     @Test
     public void testSearchBookFound() {
@@ -187,5 +250,39 @@ public class BookServiceTest {
     @Test
     public void testSearchBookNotFound() {
         assertDoesNotThrow(() -> bookService.searchBook("UNKNOWN"));
+    }
+
+    /** يغطي فرع query.isEmpty() إن وجد */
+    @Test
+    public void testSearchBookWithEmptyString() {
+        bookService.addBook(title1, author1, isbn1);
+        assertDoesNotThrow(() -> bookService.searchBook(""));
+    }
+
+    /** يغطي فرع query == null إن وجد */
+    @Test
+    public void testSearchBookWithNull() {
+        bookService.addBook(title1, author1, isbn1);
+        assertDoesNotThrow(() -> bookService.searchBook(null));
+    }
+
+    // =====================
+    // GET ALL BOOKS (لو الميثود موجودة)
+    // =====================
+
+    @Test
+    public void testGetAllBooksEmpty() {
+        List<Book> all = bookService.getAllBooks();
+        assertNotNull(all);
+        assertTrue(all.isEmpty());
+    }
+
+    @Test
+    public void testGetAllBooksNonEmpty() {
+        bookService.addBook(title1, author1, isbn1);
+        bookService.addBook(title2, author2, isbn2);
+
+        List<Book> all = bookService.getAllBooks();
+        assertEquals(2, all.size());
     }
 }
