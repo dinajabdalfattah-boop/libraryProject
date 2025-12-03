@@ -1,11 +1,10 @@
 package domain;
 
+import domain.fine.FineStrategy;
+import domain.fine.BookFineStrategy;
+
 import java.time.LocalDate;
 
-/**
- * Represents a loan between a user and a book.
- * Stores borrow date, due date, and overdue logic.
- */
 public class Loan {
 
     private final User user;
@@ -14,69 +13,48 @@ public class Loan {
     private LocalDate borrowDate;
     private LocalDate dueDate;
 
-    /**
-     * Creates a loan today using book.borrowBook()
-     */
-    public Loan(User user, Book book) {
+    private FineStrategy fineStrategy; // Strategy Pattern
+
+    // Constructor with specific strategy
+    public Loan(User user, Book book, FineStrategy fineStrategy) {
         this.user = user;
         this.book = book;
+        this.fineStrategy = fineStrategy;
         this.borrowDate = LocalDate.now();
         this.dueDate = borrowDate.plusDays(28);
     }
 
-    // ========================
-    //       GETTERS
-    // ========================
-
-    public User getUser() {
-        return user;
+    // Default constructor (BookFineStrategy)
+    public Loan(User user, Book book) {
+        this(user, book, new BookFineStrategy());
     }
 
-    public Book getBook() {
-        return book;
-    }
+    public User getUser() { return user; }
+    public Book getBook() { return book; }
+    public LocalDate getBorrowDate() { return borrowDate; }
+    public LocalDate getDueDate() { return dueDate; }
+    public FineStrategy getFineStrategy() { return fineStrategy; }
 
-    public LocalDate getBorrowDate() {
-        return borrowDate;
-    }
-
-    public LocalDate getDueDate() {
-        return dueDate;
-    }
-
-    // ========================
-    //     IS OVERDUE LOGIC
-    // ========================
-
-    /**
-     * Check overdue with a custom date (used in tests)
-     */
     public boolean isOverdue(LocalDate date) {
         return dueDate != null && date.isAfter(dueDate);
     }
 
-    /**
-     * Check overdue using today's date
-     */
     public boolean isOverdue() {
         return isOverdue(LocalDate.now());
     }
 
-    // ========================
-    //     SETTERS (needed for file loading)
-    // ========================
-
-    public void setBorrowDate(LocalDate borrowDate) {
-        this.borrowDate = borrowDate;
+    public int getOverdueDays() {
+        if (!isOverdue()) return 0;
+        return (int) java.time.temporal.ChronoUnit.DAYS.between(dueDate, LocalDate.now());
     }
 
-    public void setDueDate(LocalDate dueDate) {
-        this.dueDate = dueDate;
+    public int calculateFine() {
+        return fineStrategy.calculateFine(getOverdueDays());
     }
 
-    // ========================
-    //        toString
-    // ========================
+    public void setBorrowDate(LocalDate borrowDate) { this.borrowDate = borrowDate; }
+    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+    public void setFineStrategy(FineStrategy fineStrategy) { this.fineStrategy = fineStrategy; }
 
     @Override
     public String toString() {
