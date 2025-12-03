@@ -1,1 +1,1 @@
-UserA,no-email@none.com,0.0
+MailUser,m@mail.com,0.0

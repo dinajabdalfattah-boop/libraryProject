@@ -3,7 +3,9 @@ package service;
 import domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import utils.FileManager;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -79,6 +81,45 @@ public class UserServiceTest {
         u.setFineBalance(20);
 
         assertFalse(userService.canBorrow(u));
+    }
+    @Test
+    public void testAddUserWithEmail() {
+        assertTrue(userService.addUser("MailUser", "m@mail.com"));
+
+        User u = userService.findUserByName("MailUser");
+        assertNotNull(u);
+        assertEquals("m@mail.com", u.getEmail());
+    }
+
+    @Test
+    public void testAddUserDuplicateIgnoreCase() {
+        assertTrue(userService.addUser("Ali"));
+        assertFalse(userService.addUser("ali")); // equalsIgnoreCase
+    }
+
+    @Test
+    public void testLoadUsersFromFile() {
+        List<String> lines = new ArrayList<>();
+        lines.add("Loaded1,l1@mail.com,5.0");
+        lines.add("Loaded2,null,0.0");
+
+        // نكتب الملف زي ما يتوقع UserService
+        FileManager.writeLines("src/main/resources/data/users.txt", lines);
+
+        userService.loadUsersFromFile();
+
+        List<User> users = userService.getAllUsers();
+        assertEquals(2, users.size());
+
+        User u1 = userService.findUserByName("loaded1");
+        assertNotNull(u1);
+        assertEquals("l1@mail.com", u1.getEmail());
+        assertEquals(5.0, u1.getFineBalance());
+
+        User u2 = userService.findUserByName("Loaded2");
+        assertNotNull(u2);
+        assertNull(u2.getEmail());
+        assertEquals(0.0, u2.getFineBalance());
     }
 
     @Test
