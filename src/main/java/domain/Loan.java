@@ -1,10 +1,15 @@
 package domain;
 
-import domain.fine.FineStrategy;
 import domain.fine.BookFineStrategy;
+import domain.fine.FineStrategy;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
+/**
+ * Represents a loan of a single book to a user.
+ * Default loan period is 28 days for books.
+ */
 public class Loan {
 
     private final User user;
@@ -13,30 +18,52 @@ public class Loan {
     private LocalDate borrowDate;
     private LocalDate dueDate;
 
-    private FineStrategy fineStrategy; // Strategy Pattern
+    /** Strategy used to calculate fines for this loan. */
+    private FineStrategy fineStrategy;
 
-    // Constructor with specific strategy
+    /** Indicates if this loan is still active. */
+    private boolean active = true;
+
+    /**
+     * Creates a loan with a custom fine strategy.
+     * Borrow date = today, due date = today + 28 days.
+     */
     public Loan(User user, Book book, FineStrategy fineStrategy) {
         this.user = user;
         this.book = book;
         this.fineStrategy = fineStrategy;
+
         this.borrowDate = LocalDate.now();
         this.dueDate = borrowDate.plusDays(28);
+
+        // Mark book as borrowed
+        book.borrowBook(borrowDate);
     }
 
-    // Default constructor (BookFineStrategy)
+    /**
+     * Creates a normal book loan with default BookFineStrategy.
+     */
     public Loan(User user, Book book) {
         this(user, book, new BookFineStrategy());
     }
 
-    public User getUser() { return user; }
-    public Book getBook() { return book; }
-    public LocalDate getBorrowDate() { return borrowDate; }
-    public LocalDate getDueDate() { return dueDate; }
-    public FineStrategy getFineStrategy() { return fineStrategy; }
+    // ---------- Loan lifecycle ----------
+
+    /** Ends the loan and makes the book available again. */
+    public void returnBook() {
+        if (!active) return;
+        this.active = false;
+        book.returnBook();
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    // ---------- Overdue & fine logic ----------
 
     public boolean isOverdue(LocalDate date) {
-        return dueDate != null && date.isAfter(dueDate);
+        return active && dueDate != null && date.isAfter(dueDate);
     }
 
     public boolean isOverdue() {
@@ -45,16 +72,34 @@ public class Loan {
 
     public int getOverdueDays() {
         if (!isOverdue()) return 0;
-        return (int) java.time.temporal.ChronoUnit.DAYS.between(dueDate, LocalDate.now());
+        return (int) ChronoUnit.DAYS.between(dueDate, LocalDate.now());
     }
 
     public int calculateFine() {
         return fineStrategy.calculateFine(getOverdueDays());
     }
 
-    public void setBorrowDate(LocalDate borrowDate) { this.borrowDate = borrowDate; }
-    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
-    public void setFineStrategy(FineStrategy fineStrategy) { this.fineStrategy = fineStrategy; }
+    // ---------- Setters (for tests / persistence) ----------
+
+    public void setBorrowDate(LocalDate borrowDate) {
+        this.borrowDate = borrowDate;
+    }
+
+    public void setDueDate(LocalDate dueDate) {
+        this.dueDate = dueDate;
+    }
+
+    public void setFineStrategy(FineStrategy fineStrategy) {
+        this.fineStrategy = fineStrategy;
+    }
+
+    // ---------- Getters ----------
+
+    public User getUser() { return user; }
+    public Book getBook() { return book; }
+    public LocalDate getBorrowDate() { return borrowDate; }
+    public LocalDate getDueDate() { return dueDate; }
+    public FineStrategy getFineStrategy() { return fineStrategy; }
 
     @Override
     public String toString() {
@@ -63,6 +108,7 @@ public class Loan {
                 ", book=" + book.getTitle() +
                 ", borrow=" + borrowDate +
                 ", due=" + dueDate +
+                ", active=" + active +
                 '}';
     }
 }

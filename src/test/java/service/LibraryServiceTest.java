@@ -1,262 +1,246 @@
 package service;
 
-import domain.Book;
-import domain.Loan;
-import domain.User;
-import notification.MockNotifier;
+import domain.*;
+import notification.Observer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import utils.FileManager;
+import org.mockito.ArgumentCaptor;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 public class LibraryServiceTest {
 
-    private LibraryService library;
+    private UserService userService;
+    private BookService bookService;
+    private LoanService loanService;
+    private CDLoanService cdLoanService;
     private ReminderService reminderService;
 
-    private User u1, u2;
-    private Book b1, b2;
+    private LibraryService library;
+
+    private User user;
+    private Book book;
+    private CD cd;
+    private Loan loan;
+    private CDLoan cdLoan;
 
     @BeforeEach
     public void setUp() {
-        // constructor بدون loadAll
-        reminderService = new ReminderService();
-        reminderService.addObserver(new MockNotifier());
+        // Create mocks
+        userService = mock(UserService.class);
+        bookService = mock(BookService.class);
+        loanService = mock(LoanService.class);
+        cdLoanService = mock(CDLoanService.class);
+        reminderService = mock(ReminderService.class);
 
-        library = new LibraryService(reminderService, false);
+        library = new LibraryService(
+                userService, bookService, loanService, cdLoanService, reminderService
+        );
 
-        // Test data
-        u1 = new User("Ahmad", "a@a.com");
-        u2 = new User("Sara", "s@s.com");
+        user = new User("Ahmad", "a@a.com");
+        book = new Book("T1", "A1", "111");
+        cd = new CD("C1", "Artist", "CD01");
 
-        b1 = new Book("T1", "A1", "111");
-        b2 = new Book("T2", "A2", "222");
+        loan = mock(Loan.class);
+        cdLoan = mock(CDLoan.class);
     }
 
-    // =========================
-    // USERS TESTS
-    // =========================
+    // ==========================================
+    // FINDERS TESTS
+    // ==========================================
 
     @Test
-    public void testAddUserSuccess() {
-        assertTrue(library.addUser(u1));
-        assertEquals(1, library.getAllUsers().size());
-    }
+    public void testFindUserByName() {
+        when(userService.findUserByName("Ahmad")).thenReturn(user);
 
-    @Test
-    public void testAddUserDuplicate() {
-        library.addUser(u1);
-        assertFalse(library.addUser(u1)); // duplicate
-    }
-
-    @Test
-    public void testUnregisterUserSuccess() {
-        library.addUser(u1);
-        assertTrue(library.unregisterUser(u1));
-        assertTrue(library.getAllUsers().isEmpty());
+        User result = library.findUserByName("Ahmad");
+        assertEquals(user, result);
     }
 
     @Test
-    public void testUnregisterUserFailsDueToActiveLoans() {
-        library.addUser(u1);
-        library.addBook(b1);
+    public void testFindBookByISBN() {
+        when(bookService.findBookByISBN("111")).thenReturn(book);
 
-        library.borrowBook(u1, b1); // صار عنده كتاب
-
-        assertFalse(library.unregisterUser(u1));
+        Book result = library.findBookByISBN("111");
+        assertEquals(book, result);
     }
 
     @Test
-    public void testUnregisterUserFailsDueToFine() {
-        library.addUser(u1);
-        u1.setFineBalance(10);
+    public void testFindCDByIdSuccess() {
+        List<CD> cds = List.of(cd);
+        CD result = library.findCDById(cds, "CD01");
 
-        assertFalse(library.unregisterUser(u1));
+        assertEquals(cd, result);
     }
 
     @Test
-    public void testUnregisterUserNotExisting() {
-        assertFalse(library.unregisterUser(u1));
+    public void testFindCDByIdNotFound() {
+        List<CD> cds = List.of(cd);
+        CD result = library.findCDById(cds, "NOT_FOUND");
+
+        assertNull(result);
     }
 
-    // =========================
-    // BOOK TESTS
-    // =========================
+    // EXTRA BRANCH: list is null
+    @Test
+    public void testFindCDByIdListNull() {
+        assertThrows(NullPointerException.class, () -> library.findCDById(null, "CD01"));
+    }
 
     @Test
-    public void testAddBookSuccess() {
-        assertTrue(library.addBook(b1));
-        assertEquals(1, library.getAllBooks().size());
+    public void testFindLoanUserReturnsCorrectUser() {
+        when(loan.getBook()).thenReturn(book);
+        when(loan.isActive()).thenReturn(true);
+        when(loan.getUser()).thenReturn(user);
+        when(loanService.getAllLoans()).thenReturn(List.of(loan));
+
+        User result = library.findLoanUser(book);
+
+        assertEquals(user, result);
     }
 
     @Test
-    public void testAddBookDuplicateISBN() {
-        library.addBook(b1);
-        assertFalse(library.addBook(b1)); // duplicate
+    public void testFindLoanUserReturnsNullIfNotFound() {
+        when(loanService.getAllLoans()).thenReturn(List.of());
+
+        assertNull(library.findLoanUser(book));
     }
 
-    // =========================
-    // BORROW TESTS
-    // =========================
+    // EXTRA BRANCH: wrong book
+    @Test
+    public void testFindLoanUserIgnoresDifferentBook() {
+        Book differentBook = new Book("X", "Y", "999");
+
+        when(loan.getBook()).thenReturn(differentBook);
+        when(loan.isActive()).thenReturn(true);
+        when(loanService.getAllLoans()).thenReturn(List.of(loan));
+
+        assertNull(library.findLoanUser(book));
+    }
+
+    // EXTRA BRANCH: inactive loan
+    @Test
+    public void testFindLoanUserIgnoresInactiveLoan() {
+        when(loan.getBook()).thenReturn(book);
+        when(loan.isActive()).thenReturn(false);
+        when(loanService.getAllLoans()).thenReturn(List.of(loan));
+
+        assertNull(library.findLoanUser(book));
+    }
+
+    // ==========================================
+    // BORROW / RETURN TESTS
+    // ==========================================
 
     @Test
     public void testBorrowBookSuccess() {
-        library.addUser(u1);
-        library.addBook(b1);
+        when(loanService.createLoan(user, book)).thenReturn(true);
 
-        assertTrue(library.borrowBook(u1, b1));
+        assertTrue(library.borrowBook(user, book));
+        verify(loanService).createLoan(user, book);
+    }
+
+    @Test
+    public void testBorrowBookFails() {
+        when(loanService.createLoan(user, book)).thenReturn(false);
+
+        assertFalse(library.borrowBook(user, book));
+    }
+
+    @Test
+    public void testReturnBookSuccess() {
+        when(loanService.returnLoan(user, book)).thenReturn(true);
+
+        assertTrue(library.returnBook(user, book));
+        verify(loanService).returnLoan(user, book);
+    }
+
+    @Test
+    public void testBorrowCDSuccess() {
+        when(cdLoanService.createCDLoan(user, cd)).thenReturn(true);
+
+        assertTrue(library.borrowCD(user, cd));
+        verify(cdLoanService).createCDLoan(user, cd);
+    }
+
+    @Test
+    public void testReturnCDSuccess() {
+        when(cdLoanService.returnCDLoan(user, cd)).thenReturn(true);
+
+        assertTrue(library.returnCD(user, cd));
+        verify(cdLoanService).returnCDLoan(user, cd);
+    }
+
+    // ==========================================
+    // OVERDUE TESTS
+    // ==========================================
+
+    @Test
+    public void testGetOverdueLoans() {
+        when(loanService.getOverdueLoans()).thenReturn(List.of(loan));
+
+        List<Loan> result = library.getOverdueLoans();
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    public void testGetOverdueCDLoans() {
+        when(cdLoanService.getOverdueCDLoans()).thenReturn(List.of(cdLoan));
+
+        List<CDLoan> result = library.getOverdueCDLoans();
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    public void testGetAllLoans() {
+        when(loanService.getAllLoans()).thenReturn(List.of(loan));
+
         assertEquals(1, library.getAllLoans().size());
     }
 
     @Test
-    public void testBorrowBookFailsDueToRules() {
-        library.addUser(u1);
-        library.addBook(b1);
+    public void testGetAllCDLoans() {
+        when(cdLoanService.getAllCDLoans()).thenReturn(List.of(cdLoan));
 
-        // نعطيه غرامة → يمنع الاستعارة داخل user.borrowBook
-        u1.setFineBalance(20);
+        assertEquals(1, library.getAllCDLoans().size());
+    }
 
-        assertFalse(library.borrowBook(u1, b1));
-        assertTrue(library.getAllLoans().isEmpty());
+    // ==========================================
+    // REMINDER TEST
+    // ==========================================
+
+    @Test
+    public void testSendOverdueReminders() {
+        List<Loan> overdueLoans = List.of(loan);
+        List<CDLoan> overdueCDLoans = List.of(cdLoan);
+
+        when(loanService.getOverdueLoans()).thenReturn(overdueLoans);
+        when(cdLoanService.getOverdueCDLoans()).thenReturn(overdueCDLoans);
+
+        library.sendOverdueReminders();
+
+        verify(reminderService).sendReminders(overdueLoans, overdueCDLoans);
+    }
+
+    // ==========================================
+    // LISTS FROM SERVICES
+    // ==========================================
+
+    @Test
+    public void testGetAllUsers() {
+        when(userService.getAllUsers()).thenReturn(List.of(user));
+
+        assertEquals(1, library.getAllUsers().size());
     }
 
     @Test
-    public void testBorrowBookFailsUserNotRegistered() {
-        // فقط كتاب في المكتبة
-        library.addBook(b1);
+    public void testGetAllBooks() {
+        when(bookService.getAllBooks()).thenReturn(List.of(book));
 
-        assertFalse(library.borrowBook(u1, b1)); // u1 مش مضاف
-    }
-
-    @Test
-    public void testBorrowBookFailsBookNotInLibrary() {
-        // فقط يوزر في المكتبة
-        library.addUser(u1);
-
-        assertFalse(library.borrowBook(u1, b1)); // b1 مش مضاف
-    }
-
-    // =========================
-    // GET LISTS TESTS
-    // =========================
-
-    @Test
-    public void testGetAllListsDefaultEmpty() {
-        assertTrue(library.getAllUsers().isEmpty());
-        assertTrue(library.getAllBooks().isEmpty());
-        assertTrue(library.getAllLoans().isEmpty());
-    }
-
-    // =========================
-    // OVERDUE + REMINDERS
-    // =========================
-
-    @Test
-    public void testGetOverdueLoans() {
-        library.addUser(u1);
-        library.addBook(b1);
-
-        library.borrowBook(u1, b1);
-
-        // نخلي الكتاب متأخر
-        Loan loan = library.getAllLoans().get(0);
-        loan.setDueDate(LocalDate.now().minusDays(10));
-
-        assertEquals(1, library.getOverdueLoans().size());
-    }
-
-    @Test
-    public void testGetOverdueLoansEmpty() {
-        assertTrue(library.getOverdueLoans().isEmpty());
-    }
-
-    @Test
-    public void testSendOverdueRemindersNoOverdue() {
-        assertDoesNotThrow(() -> library.sendOverdueReminders());
-    }
-
-    @Test
-    public void testSendOverdueRemindersWithOverdue() {
-        library.addUser(u1);
-        library.addBook(b1);
-
-        assertTrue(library.borrowBook(u1, b1));
-
-        // نخليها متأخرة
-        Loan loan = library.getAllLoans().get(0);
-        loan.setDueDate(LocalDate.now().minusDays(5));
-
-        assertDoesNotThrow(() -> library.sendOverdueReminders());
-    }
-
-    // =========================
-    // LOAD FROM FILES
-    // =========================
-
-    @Test
-    public void testLoadAllFromFiles() {
-        // نجهز ملفات الـ data مثل ما يتوقع LibraryService
-
-        // USERS_FILE: name,email,fine
-        List<String> userLines = new ArrayList<>();
-        userLines.add("User1,u1@mail.com,10.5");
-        userLines.add(""); // سطر فاضي يغطي line.isBlank()
-        FileManager.writeLines("src/main/resources/data/users.txt", userLines);
-
-        // BOOKS_FILE: title,author,isbn,available,borrowDate,dueDate
-        List<String> bookLines = new ArrayList<>();
-        // كتاب غير متاح مع تواريخ
-        bookLines.add("BT1,BA1,111,false,2024-01-01,2024-01-10");
-        // كتاب متاح مع nulls
-        bookLines.add("BT2,BA2,222,true,null,null");
-        FileManager.writeLines("src/main/resources/data/books.txt", bookLines);
-
-        // LOANS_FILE: userName,isbn,dueDate
-        List<String> loanLines = new ArrayList<>();
-        loanLines.add("User1,111,2024-01-10");         // valid
-        loanLines.add("Unknown,111,2024-01-10");       // user غير موجود
-        loanLines.add("User1,999,2024-01-10");         // book غير موجود
-        loanLines.add("");                             // سطر فاضي
-        FileManager.writeLines("src/main/resources/data/loans.txt", loanLines);
-
-        // نعمل LibraryService جديد مع loadFromFiles = true
-        reminderService = new ReminderService();
-        reminderService.addObserver(new MockNotifier());
-        library = new LibraryService(reminderService, true); // يستدعي loadAll()
-
-        // نتحقق من الـ users
-        List<User> loadedUsers = library.getAllUsers();
-        assertEquals(1, loadedUsers.size());
-        User loadedU = loadedUsers.get(0);
-        assertEquals("User1", loadedU.getUserName());
-        assertEquals("u1@mail.com", loadedU.getEmail());
-        assertEquals(10.5, loadedU.getFineBalance());
-
-        // نتحقق من الـ books
-        List<Book> loadedBooks = library.getAllBooks();
-        assertEquals(2, loadedBooks.size());
-
-        Book book111 = library.findBookByISBN("111");
-        Book book222 = library.findBookByISBN("222");
-
-        assertNotNull(book111);
-        assertNotNull(book222);
-
-        assertFalse(book111.isAvailable()); // من الملف false
-        assertTrue(book222.isAvailable());  // من الملف true
-
-        // نتحقق من القروض: لازم بس واحدة valid
-        List<Loan> loadedLoans = library.getAllLoans();
-        assertEquals(1, loadedLoans.size());
-
-        Loan l = loadedLoans.get(0);
-        assertEquals("User1", l.getUser().getUserName());
-        assertEquals("111", l.getBook().getIsbn());
-        assertEquals(LocalDate.parse("2024-01-10"), l.getDueDate());
+        assertEquals(1, library.getAllBooks().size());
     }
 }

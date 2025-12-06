@@ -31,79 +31,124 @@ public class AdminServiceTest {
         id2 = 200;
     }
 
-    @Test
-    public void testAddAdminAndLogin() {
-        adminService.addAdmin(name1, id1, pass1);
+    // ---------------------------------------------------------
+    // Add Admin Tests
+    // ---------------------------------------------------------
 
-        assertTrue(adminService.login(name1, pass1));
-        assertTrue(adminService.isAdminLoggedIn());
+    @Test
+    public void testAddAdminSuccess() {
+        assertTrue(adminService.addAdmin(name1, id1, pass1));
+        assertEquals(1, adminService.getAllAdmins().size());
     }
 
     @Test
-    public void testAddDuplicateAdminIdFails() {
-        adminService.addAdmin(name1, id1, pass1);
-        adminService.addAdmin(name2, id1, pass2);
+    public void testAddAdminFailsWhenDuplicateId() {
+        assertTrue(adminService.addAdmin(name1, id1, pass1));
 
-        assertFalse(adminService.login(name2, pass2));
-
-        // original admin still works
-        assertTrue(adminService.login(name1, pass1));
+        // duplicate id
+        assertFalse(adminService.addAdmin("AnotherName", id1, "newPass"));
     }
+
+    @Test
+    public void testAddAdminFailsWhenDuplicateUsername() {
+        assertTrue(adminService.addAdmin(name1, id1, pass1));
+
+        // duplicate username
+        assertFalse(adminService.addAdmin(name1, 9999, "randomPass"));
+    }
+
+    // ---------------------------------------------------------
+    // Login Tests
+    // ---------------------------------------------------------
 
     @Test
     public void testLoginSuccess() {
         adminService.addAdmin(name1, id1, pass1);
+
         assertTrue(adminService.login(name1, pass1));
+        assertTrue(adminService.isAdminLoggedIn());
+
+        Admin logged = adminService.getLoggedInAdmin();
+        assertNotNull(logged);
+        assertEquals(name1, logged.getUserName());
+        assertTrue(logged.isLoggedIn());
     }
 
     @Test
-    public void testLoginWrongPassword() {
+    public void testLoginFailsWrongPassword() {
         adminService.addAdmin(name1, id1, pass1);
+
         assertFalse(adminService.login(name1, "WrongPass"));
+        assertFalse(adminService.isAdminLoggedIn());
     }
 
     @Test
-    public void testLoginWrongUsername() {
+    public void testLoginFailsWrongUsername() {
         adminService.addAdmin(name1, id1, pass1);
+
         assertFalse(adminService.login("Unknown", pass1));
+        assertFalse(adminService.isAdminLoggedIn());
     }
 
     @Test
-    public void testLoginWhenAlreadyLoggedIn() {
+    public void testLoginFailsWhenAlreadyLoggedIn() {
         adminService.addAdmin(name1, id1, pass1);
+        adminService.addAdmin(name2, id2, pass2);
+
         assertTrue(adminService.login(name1, pass1));
 
-        assertFalse(adminService.login(name1, pass1));
+        // logging in again should fail
+        assertFalse(adminService.login(name2, pass2));
         assertTrue(adminService.isAdminLoggedIn());
     }
 
+    // ---------------------------------------------------------
+    // Logout Tests
+    // ---------------------------------------------------------
+
     @Test
-    public void testLogout() {
+    public void testLogoutSuccess() {
         adminService.addAdmin(name1, id1, pass1);
         adminService.login(name1, pass1);
 
         adminService.logout();
+
         assertFalse(adminService.isAdminLoggedIn());
+        assertNull(adminService.getLoggedInAdmin());
     }
 
     @Test
-    public void testLogoutWhenNotLoggedIn() {
-        adminService.logout();
+    public void testLogoutWhenNoAdminLoggedIn() {
+        adminService.logout(); // should not crash
         assertFalse(adminService.isAdminLoggedIn());
+        assertNull(adminService.getLoggedInAdmin());
     }
 
-    @Test
-    public void testIsAdminLoggedInDefaultFalse() {
-        assertFalse(adminService.isAdminLoggedIn());
-    }
+    // ---------------------------------------------------------
+    // Getters Tests
+    // ---------------------------------------------------------
 
     @Test
-    public void testGetLoggedInAdmin() {
+    public void testGetLoggedInAdminReturnsCorrectObject() {
         adminService.addAdmin(name1, id1, pass1);
         adminService.login(name1, pass1);
 
-        Admin loggedIn = adminService.getLoggedInAdmin();
-        assertNotNull(loggedIn);
-        assertEquals(name1, loggedIn.getUserName());
+        Admin admin = adminService.getLoggedInAdmin();
+        assertNotNull(admin);
+        assertEquals(name1, admin.getUserName());
+        assertEquals(id1, admin.getAdminId());
+    }
+
+    @Test
+    public void testIsAdminLoggedInFalseByDefault() {
+        assertFalse(adminService.isAdminLoggedIn());
+    }
+
+    @Test
+    public void testGetAllAdmins() {
+        adminService.addAdmin(name1, id1, pass1);
+        adminService.addAdmin(name2, id2, pass2);
+
+        assertEquals(2, adminService.getAllAdmins().size());
     }
 }

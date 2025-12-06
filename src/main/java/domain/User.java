@@ -6,77 +6,97 @@ import java.util.List;
 public class User {
 
     private final String name;
-    private String email;        // NOT FINAL (to allow setEmail)
+    private String email;
     private double fineBalance;
-    private final List<Book> borrowedBooks;
 
-    /** OLD constructor (kept for compatibility) */
+    /** Active book loans */
+    private final List<Loan> activeBookLoans;
+
+    /** Active CD loans */
+    private final List<CDLoan> activeCDLoans;
+
+    // -------------------- Constructors --------------------
+
     public User(String name) {
         this(name, "no-email@none.com");
     }
 
-    /** MAIN constructor */
     public User(String name, String email) {
         this.name = name;
         this.email = email;
-        this.fineBalance = 0.0;
-        this.borrowedBooks = new ArrayList<>();
+        this.fineBalance = 0;
+        this.activeBookLoans = new ArrayList<>();
+        this.activeCDLoans = new ArrayList<>();
     }
 
-    // =======================
-    //        GETTERS
-    // =======================
+    // ---------------------- Getters -----------------------
 
-    public String getUserName() {
-        return name;
-    }
+    public String getUserName() { return name; }
+    public String getEmail() { return email; }
+    public double getFineBalance() { return fineBalance; }
 
-    public String getEmail() {
-        return email;
-    }
+    public List<Loan> getActiveBookLoans() { return activeBookLoans; }
+    public List<CDLoan> getActiveCDLoans() { return activeCDLoans; }
 
-    public double getFineBalance() {
-        return fineBalance;
-    }
+    // ---------------------- Setters -----------------------
 
-    public List<Book> getBorrowedBooks() {
-        return borrowedBooks;
-    }
+    public void setEmail(String email) { this.email = email; }
+    public void setFineBalance(double fineBalance) { this.fineBalance = fineBalance; }
 
-    // =======================
-    //        SETTERS
-    // =======================
+    // ---------------------- Core Logic --------------------
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    /** Borrow a book */
+    public void addLoan(Loan loan) {
 
-    public void setFineBalance(double fineBalance) {
-        this.fineBalance = fineBalance;
-    }
-
-    // =======================
-    //       CORE LOGIC
-    // =======================
-
-    public void borrowBook(Book book) {
+        // Sprint 4 Restrictions
         if (fineBalance > 0)
-            throw new IllegalStateException("Cannot borrow: Pay fines first!");
+            throw new IllegalStateException("Cannot borrow: Unpaid fines.");
 
-        for (Book b : borrowedBooks)
-            if (b.isOverdue())
-                throw new IllegalStateException("Cannot borrow: Return overdue books first!");
+        if (hasOverdueLoans())
+            throw new IllegalStateException("Cannot borrow: Overdue loans exist.");
 
-        book.borrowBook();
-        borrowedBooks.add(book);
+        // Loan already marks the book as borrowed, so no duplication here
+        activeBookLoans.add(loan);
     }
 
-    public void returnBook(Book book) {
-        if (borrowedBooks.remove(book)) {
-            book.returnBook();
+    /** Borrow a CD */
+    public void addCDLoan(CDLoan loan) {
+
+        if (fineBalance > 0)
+            throw new IllegalStateException("Cannot borrow: Unpaid fines.");
+
+        if (hasOverdueLoans())
+            throw new IllegalStateException("Cannot borrow: Overdue loans exist.");
+
+        activeCDLoans.add(loan);
+    }
+
+    /** Return book loan */
+    public void returnLoan(Loan loan) {
+        if (activeBookLoans.remove(loan)) {
+            loan.returnBook(); // mark loan inactive + book returned
         }
     }
 
+    /** Return CD loan */
+    public void returnCDLoan(CDLoan loan) {
+        if (activeCDLoans.remove(loan)) {
+            loan.returnCD();
+        }
+    }
+
+    /** Overdue detection */
+    public boolean hasOverdueLoans() {
+        return activeBookLoans.stream().anyMatch(Loan::isOverdue)
+                || activeCDLoans.stream().anyMatch(CDLoan::isOverdue);
+    }
+
+    public int getOverdueCount() {
+        return (int) activeBookLoans.stream().filter(Loan::isOverdue).count()
+                + (int) activeCDLoans.stream().filter(CDLoan::isOverdue).count();
+    }
+
+    /** Pay fines */
     public void payFine(double amount) {
         if (amount >= fineBalance)
             fineBalance = 0;
@@ -84,16 +104,10 @@ public class User {
             fineBalance -= amount;
     }
 
-    public int getOverdueCount() {
-        int c = 0;
-        for (Book b : borrowedBooks)
-            if (b.isOverdue()) c++;
-        return c;
-    }
-
+    /** Unregister rules */
     public boolean canBeUnregistered() {
-        boolean hasActive = borrowedBooks.stream().anyMatch(b -> !b.isAvailable());
-        return !hasActive && fineBalance <= 0;
+        boolean hasActiveLoans = !activeBookLoans.isEmpty() || !activeCDLoans.isEmpty();
+        return !hasActiveLoans && fineBalance <= 0;
     }
 
     @Override

@@ -2,30 +2,49 @@ package domain;
 
 /**
  * Represents an administrator in the Library Management System.
- * Admins can log in and manage users and books.
  */
 public class Admin {
 
-    /** Username of the admin. */
     private String userName;
-
-    /** Unique admin ID (immutable). */
     private final int adminId;
-
-    /** Admin password. */
     private String password;
 
-    /**
-     * Creates a new Admin.
-     *
-     * @param userName the admin username
-     * @param adminId  unique ID of the admin
-     * @param password the admin password
-     */
+    /** Tracks login state of the admin. */
+    private boolean loggedIn = false;
+
     public Admin(String userName, int adminId, String password) {
         this.userName = userName;
         this.adminId = adminId;
         this.password = password;
+    }
+
+    // -------- Authentication --------
+
+    /**
+     * Attempts to log in the admin using username and password.
+     *
+     * @return true if credentials match, false otherwise.
+     */
+    public boolean login(String userName, String password) {
+        if (this.userName.equals(userName) && this.password.equals(password)) {
+            this.loggedIn = true;
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Logs out the admin.
+     */
+    public void logout() {
+        this.loggedIn = false;
+    }
+
+    /**
+     * @return true if admin is logged in.
+     */
+    public boolean isLoggedIn() {
+        return loggedIn;
     }
 
     // -------- Getters --------
@@ -52,13 +71,12 @@ public class Admin {
         this.password = password;
     }
 
-    // -------- Utility --------
-
     @Override
     public String toString() {
         return "Admin{" +
                 "userName='" + userName + '\'' +
                 ", adminId=" + adminId +
+                ", loggedIn=" + loggedIn +
                 '}';
     }
 }

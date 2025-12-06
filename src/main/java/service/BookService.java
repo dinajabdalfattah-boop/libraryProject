@@ -1,7 +1,7 @@
 package service;
 
 import domain.Book;
-import utils.FileManager;
+import file.FileManager;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -12,11 +12,15 @@ public class BookService {
     private final List<Book> books = new ArrayList<>();
     private static final String BOOKS_FILE = "src/main/resources/data/books.txt";
 
+    // ---------------------------------------------------------
+    // ADD BOOK
+    // ---------------------------------------------------------
+
+    /** Adds a book if ISBN is unique */
     public boolean addBook(String title, String author, String isbn) {
 
-        for (Book b : books)
-            if (b.getIsbn().equals(isbn))
-                return false;
+        if (findBookByISBN(isbn) != null)
+            return false;
 
         Book book = new Book(title, author, isbn);
         books.add(book);
@@ -25,18 +29,22 @@ public class BookService {
         return true;
     }
 
+    // ---------------------------------------------------------
+    // SAVE / LOAD
+    // ---------------------------------------------------------
+
     private void saveBooksToFile() {
         List<String> lines = new ArrayList<>();
 
         for (Book b : books) {
-            String line =
-                    b.getTitle() + "," +
-                            b.getAuthor() + "," +
-                            b.getIsbn() + "," +
-                            b.isAvailable() + "," +
-                            (b.getBorrowDate() == null ? "null" : b.getBorrowDate()) + "," +
-                            (b.getDueDate() == null ? "null" : b.getDueDate());
-
+            String line = String.join(",",
+                    b.getTitle(),
+                    b.getAuthor(),
+                    b.getIsbn(),
+                    String.valueOf(b.isAvailable()),
+                    b.getBorrowDate() == null ? "null" : b.getBorrowDate().toString(),
+                    b.getDueDate() == null ? "null" : b.getDueDate().toString()
+            );
             lines.add(line);
         }
 
@@ -47,11 +55,13 @@ public class BookService {
         books.clear();
 
         List<String> lines = FileManager.readLines(BOOKS_FILE);
+        if (lines == null) return;
 
         for (String line : lines) {
             if (line.isBlank()) continue;
 
             String[] p = line.split(",");
+            if (p.length < 6) continue;  // NEW: لمنع ArrayIndexOutOfBounds
 
             Book b = new Book(p[0], p[1], p[2]);
 
@@ -59,66 +69,59 @@ public class BookService {
             b.setAvailable(available);
 
             if (!available) {
-                if (!p[4].equals("null")) b.setBorrowDate(LocalDate.parse(p[4]));
-                if (!p[5].equals("null")) b.setDueDate(LocalDate.parse(p[5]));
+                if (!p[4].equals("null"))
+                    b.setBorrowDate(LocalDate.parse(p[4]));
+                if (!p[5].equals("null"))
+                    b.setDueDate(LocalDate.parse(p[5]));
             }
 
             books.add(b);
         }
     }
 
-    public List<Book> getAllBooks() {
-        return books;
+    // ---------------------------------------------------------
+    // SEARCH
+    // ---------------------------------------------------------
+
+    public List<Book> search(String keyword) {
+
+        if (keyword == null)
+            throw new NullPointerException("keyword is null");
+
+        // NEW: keyword contains only spaces → return all books
+        if (keyword.trim().isEmpty())
+            return new ArrayList<>(books);
+
+        keyword = keyword.toLowerCase();
+        List<Book> results = new ArrayList<>();
+
+        for (Book b : books) {
+            if (b.getTitle().toLowerCase().contains(keyword) ||
+                    b.getAuthor().toLowerCase().contains(keyword) ||
+                    b.getIsbn().toLowerCase().contains(keyword)) {
+                results.add(b);
+            }
+        }
+
+        return results;
     }
+
+    // ---------------------------------------------------------
+    // FIND BY ISBN
+    // ---------------------------------------------------------
 
     public Book findBookByISBN(String isbn) {
         for (Book b : books)
             if (b.getIsbn().equals(isbn))
                 return b;
-
         return null;
     }
 
-    public boolean borrowBook(String isbn) {
-        Book b = findBookByISBN(isbn);
-        if (b == null) return false;
+    // ---------------------------------------------------------
+    // GET ALL BOOKS
+    // ---------------------------------------------------------
 
-        try {
-            b.borrowBook();
-            saveBooksToFile();
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+    public List<Book> getAllBooks() {
+        return books;
     }
-
-    public boolean returnBook(String isbn) {
-        Book b = findBookByISBN(isbn);
-        if (b == null) return false;
-
-        b.returnBook();
-        saveBooksToFile();
-        return true;
-    }
-
-    public boolean isBookOverdue(String isbn) {
-        Book b = findBookByISBN(isbn);
-        return b != null && b.isOverdue();
-    }
-    public void searchBook(String keyword) {
-
-        for (Book b : books) {
-            if (b.getTitle().equalsIgnoreCase(keyword) ||
-                    b.getAuthor().equalsIgnoreCase(keyword) ||
-                    b.getIsbn().equalsIgnoreCase(keyword)) {
-
-                System.out.println("Found book: " + b);
-                return; // found, end
-            }
-        }
-
-        // If not found
-        System.out.println("No book found for keyword: " + keyword);
-    }
-
 }

@@ -1,10 +1,14 @@
 package service;
 
+import domain.Book;
+import domain.CDLoan;
+import domain.Loan;
 import domain.User;
+import file.FileManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import utils.FileManager;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,45 +18,64 @@ public class UserServiceTest {
 
     private UserService userService;
 
-    private String name1;
-    private String name2;
-
     @BeforeEach
     public void setUp() {
         userService = new UserService();
-
-        name1 = "UserA";
-        name2 = "UserB";
+        FileManager.writeLines("src/main/resources/data/users.txt", new ArrayList<>());
     }
+
+    // ---------------------------------------------------------
+    // ADD USER TESTS
+    // ---------------------------------------------------------
 
     @Test
     public void testAddUserSuccess() {
-        assertTrue(userService.addUser(name1));
-
-        User u = userService.findUserByName(name1);
-        assertNotNull(u);
-        assertEquals(name1, u.getUserName());
+        assertTrue(userService.addUser("UserA"));
+        assertNotNull(userService.findUserByName("UserA"));
     }
 
     @Test
     public void testAddUserDuplicateFails() {
-        assertTrue(userService.addUser(name1));
-        assertFalse(userService.addUser(name1));
-
-        List<User> all = userService.getAllUsers();
-        assertEquals(1, all.size());
+        userService.addUser("UserA");
+        assertFalse(userService.addUser("UserA"));
     }
 
     @Test
+    public void testAddUserDuplicateIgnoreCaseFails() {
+        userService.addUser("Ali");
+        assertFalse(userService.addUser("ali"));
+    }
+
+    @Test
+    public void testAddUserWithEmail() {
+        userService.addUser("MailUser", "m@mail.com");
+        assertEquals("m@mail.com", userService.findUserByName("MailUser").getEmail());
+    }
+
+    @Test
+    public void testAddUserWithNullEmail() {
+        userService.addUser("NullEmailUser", null);
+        assertNull(userService.findUserByName("NullEmailUser").getEmail());
+    }
+
+    @Test
+    public void testAddUserWithNullNameDoesNotCrash() {
+        assertDoesNotThrow(() -> userService.addUser(null, "x@mail.com"));
+    }
+
+    // ---------------------------------------------------------
+    // FINDERS
+    // ---------------------------------------------------------
+
+    @Test
     public void testFindUserExists() {
-        userService.addUser(name1);
-        User u = userService.findUserByName(name1);
-        assertNotNull(u);
+        userService.addUser("A");
+        assertNotNull(userService.findUserByName("A"));
     }
 
     @Test
     public void testFindUserNotExists() {
-        assertNull(userService.findUserByName("Unknown"));
+        assertNull(userService.findUserByName("Ghost"));
     }
 
     @Test
@@ -62,78 +85,175 @@ public class UserServiceTest {
 
     @Test
     public void testGetAllUsersNonEmpty() {
-        userService.addUser(name1);
-        userService.addUser(name2);
+        userService.addUser("A");
+        userService.addUser("B");
+        assertEquals(2, userService.getAllUsers().size());
+    }
+
+    // ---------------------------------------------------------
+    // LOAD USERS FROM FILE
+    // ---------------------------------------------------------
+
+    @Test
+    public void testLoadUsersFromFileValid() {
+        List<String> lines = List.of(
+                "User1,u1@mail.com,5.0",
+                "User2,null,0.0",
+                ""
+        );
+
+        FileManager.writeLines("src/main/resources/data/users.txt", lines);
+        userService.loadUsersFromFile();
+
         assertEquals(2, userService.getAllUsers().size());
     }
 
     @Test
-    public void testCanBorrowNoFine() {
-        userService.addUser(name1);
-        User u = userService.findUserByName(name1);
-        assertTrue(userService.canBorrow(u));
+    public void testLoadUsersFromFileMissingFields() {
+        FileManager.writeLines("src/main/resources/data/users.txt",
+                List.of("BadLine"));
+
+        assertDoesNotThrow(() -> userService.loadUsersFromFile());
+        assertEquals(0, userService.getAllUsers().size());
     }
 
     @Test
-    public void testCanBorrowWithFine() {
-        userService.addUser(name1);
-        User u = userService.findUserByName(name1);
-        u.setFineBalance(20);
+    public void testLoadUsersFromFileFineIsInvalidString() {
+        FileManager.writeLines("src/main/resources/data/users.txt",
+                List.of("UserA,a@mail.com,notNumber"));
 
-        assertFalse(userService.canBorrow(u));
-    }
-    @Test
-    public void testAddUserWithEmail() {
-        assertTrue(userService.addUser("MailUser", "m@mail.com"));
+        assertDoesNotThrow(() -> userService.loadUsersFromFile());
 
-        User u = userService.findUserByName("MailUser");
+        User u = userService.findUserByName("UserA");
         assertNotNull(u);
-        assertEquals("m@mail.com", u.getEmail());
+        assertEquals(0.0, u.getFineBalance()); // from catch
     }
 
     @Test
-    public void testAddUserDuplicateIgnoreCase() {
-        assertTrue(userService.addUser("Ali"));
-        assertFalse(userService.addUser("ali")); // equalsIgnoreCase
-    }
-
-    @Test
-    public void testLoadUsersFromFile() {
-        List<String> lines = new ArrayList<>();
-        lines.add("Loaded1,l1@mail.com,5.0");
-        lines.add("Loaded2,null,0.0");
-
-        // نكتب الملف زي ما يتوقع UserService
-        FileManager.writeLines("src/main/resources/data/users.txt", lines);
+    public void testLoadUsersFromFileEmailEmptyString() {
+        FileManager.writeLines("src/main/resources/data/users.txt",
+                List.of("UserA,,3.0"));
 
         userService.loadUsersFromFile();
 
-        List<User> users = userService.getAllUsers();
-        assertEquals(2, users.size());
-
-        User u1 = userService.findUserByName("loaded1");
-        assertNotNull(u1);
-        assertEquals("l1@mail.com", u1.getEmail());
-        assertEquals(5.0, u1.getFineBalance());
-
-        User u2 = userService.findUserByName("Loaded2");
-        assertNotNull(u2);
-        assertNull(u2.getEmail());
-        assertEquals(0.0, u2.getFineBalance());
+        User u = userService.findUserByName("UserA");
+        assertNotNull(u);
+        assertEquals("", u.getEmail());
+        assertEquals(3.0, u.getFineBalance());
     }
 
     @Test
-    public void testMultipleUsersBorrowLogic() {
-        userService.addUser(name1);
-        userService.addUser(name2);
+    public void testLoadUsersFromLineSpacesOnly() {
+        FileManager.writeLines("src/main/resources/data/users.txt",
+                List.of("   "));
 
-        User u1 = userService.findUserByName(name1);
-        User u2 = userService.findUserByName(name2);
+        assertDoesNotThrow(() -> userService.loadUsersFromFile());
+        assertEquals(0, userService.getAllUsers().size());
+    }
 
-        u1.setFineBalance(10);
-        u2.setFineBalance(0);
+    // ---------------------------------------------------------
+    // CAN BORROW
+    // ---------------------------------------------------------
 
-        assertFalse(userService.canBorrow(u1));
-        assertTrue(userService.canBorrow(u2));
+    @Test
+    public void testCanBorrowUserNullReturnsFalse() {
+        assertFalse(userService.canBorrow(null));
+    }
+
+    @Test
+    public void testCanBorrowNoFine() {
+        userService.addUser("A");
+        assertTrue(userService.canBorrow(userService.findUserByName("A")));
+    }
+
+    @Test
+    public void testCanBorrowFailsDueToFine() {
+        userService.addUser("A");
+        User u = userService.findUserByName("A");
+        u.setFineBalance(10);
+        assertFalse(userService.canBorrow(u));
+    }
+
+    @Test
+    public void testCanBorrowFailsDueToOverdueLoan() {
+        userService.addUser("A");
+        User u = userService.findUserByName("A");
+
+        Loan l = new Loan(u, new Book("T", "A", "111"));
+        l.setDueDate(LocalDate.now().minusDays(3));
+
+        u.getActiveBookLoans().add(l);
+
+        assertFalse(userService.canBorrow(u));
+    }
+
+    // ---------------------------------------------------------
+    // UNREGISTER USER
+    // ---------------------------------------------------------
+
+    @Test
+    public void testUnregisterUserSuccess() {
+        userService.addUser("A");
+        assertTrue(userService.unregisterUser(userService.findUserByName("A")));
+    }
+
+    @Test
+    public void testUnregisterUserFailsDueToFine() {
+        userService.addUser("A");
+        User u = userService.findUserByName("A");
+        u.setFineBalance(10);
+        assertFalse(userService.unregisterUser(u));
+    }
+
+    @Test
+    public void testUnregisterUserFailsDueToActiveBookLoan() {
+        userService.addUser("A");
+        User u = userService.findUserByName("A");
+        u.getActiveBookLoans().add(new Loan(u, new Book("T","A","111")));
+
+        assertFalse(userService.unregisterUser(u));
+    }
+
+    @Test
+    public void testUnregisterUserFailsDueToActiveCDLoan() {
+        userService.addUser("A");
+        User u = userService.findUserByName("A");
+        u.getActiveCDLoans().add(new CDLoan(u, new domain.CD("C","X","1")));
+
+        assertFalse(userService.unregisterUser(u));
+    }
+
+    @Test
+    public void testUnregisterUserNull() {
+        assertFalse(userService.unregisterUser(null));
+    }
+
+    @Test
+    public void testUnregisterUserNotInList() {
+        assertFalse(userService.unregisterUser(new User("Ghost")));
+    }
+
+    @Test
+    public void testUnregisterUserFailsBecauseDifferentInstance() {
+        userService.addUser("A");
+        User fake = new User("A", "xx@mail.com");
+        assertFalse(userService.unregisterUser(fake));
+    }
+
+    @Test
+    public void testUnregisterUserWithNullName() {
+        User u = new User(null, "x@mail.com");
+        assertFalse(userService.unregisterUser(u));
+    }
+
+    @Test
+    public void testUnregisterUserHasBothActiveBookAndCDLoans() {
+        userService.addUser("A");
+        User u = userService.findUserByName("A");
+
+        u.getActiveBookLoans().add(new Loan(u, new Book("T","A","111")));
+        u.getActiveCDLoans().add(new CDLoan(u, new domain.CD("C","X","1")));
+
+        assertFalse(userService.unregisterUser(u));
     }
 }

@@ -1,2 +1,0 @@
-User1,u1@mail.com,10.5
-
