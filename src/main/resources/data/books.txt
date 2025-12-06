@@ -1,1 +1,2 @@
-T1,A1,111,true,null,null
+BT1,BA1,111,false,2024-01-01,2024-01-10
+BT2,BA2,222,true,null,null
