@@ -7,21 +7,32 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Handles user registration, lookup, persistence, and borrowing eligibility.
+ * This service handles all user-related operations in the library system.
+ * It supports:
+ * - registering new users
+ * - saving and loading user data from a file
+ * - searching for users
+ * - checking borrowing eligibility (Sprint 4)
+ * - unregistering users safely
+ *
+ * All users are stored in an in-memory list and synchronized with a file.
  */
 public class UserService {
 
     private final List<User> users = new ArrayList<>();
     private static final String USERS_FILE = "src/main/resources/data/users.txt";
 
-    // ---------------------------------------------------------
-    // User Creation
-    // ---------------------------------------------------------
-
-    /** Add user with name + email */
+    /**
+     * Adds a new user with the given name and email.
+     * The method allows null values, but prevents duplicate names
+     * (case-insensitive).
+     *
+     * @param name  the user's name
+     * @param email the user's email address
+     * @return true if the user was successfully added, false if duplicate name
+     */
     public boolean addUser(String name, String email) {
 
-        // allow null name or email, but prevent duplicates
         for (User u : users) {
             if (u.getUserName() != null &&
                     name != null &&
@@ -37,15 +48,24 @@ public class UserService {
         return true;
     }
 
-    /** Version for tests */
+    /**
+     * Overloaded version used mainly for tests.
+     * Creates a user with a default email value.
+     *
+     * @param name user name
+     * @return true if added successfully
+     */
     public boolean addUser(String name) {
         return addUser(name, "no-email@none.com");
     }
 
-    // ---------------------------------------------------------
-    // Save users to file
-    // ---------------------------------------------------------
-
+    /**
+     * Saves all current users to the storage file.
+     * Each user is written as:
+     * name,email,fineBalance
+     *
+     * Null emails are written as the string "null".
+     */
     private void saveUsers() {
         List<String> lines = new ArrayList<>();
 
@@ -59,11 +79,17 @@ public class UserService {
         FileManager.writeLines(USERS_FILE, lines);
     }
 
-    // ---------------------------------------------------------
-    // Load users from file (fully safe)
-    // ---------------------------------------------------------
-
-    /** ✔ النسخة النهائية – آمنة بالكامل */
+    /**
+     * Loads user data from the file and reconstructs the users list.
+     * This method is designed to be fully safe, avoiding:
+     * - null pointer issues
+     * - incomplete lines
+     * - invalid number formats
+     *
+     * Special handling:
+     * - "null" email string → real null
+     * - malformed fine values default to 0.0
+     */
     public void loadUsersFromFile() {
 
         users.clear();
@@ -78,29 +104,23 @@ public class UserService {
 
             String[] p = line.split(",");
 
-            // حماية من ArrayIndexOutOfBounds
             if (p.length < 3)
                 continue;
 
-            // name
             String name = p[0];
 
-            // email (الفرق الوحيد الذي طلبته)
-            // "" يبقى كما هو
-            // "null" → null
             String email;
             if (p[1].equals("null")) {
                 email = null;
             } else {
-                email = p[1];   // يسمح بالقيم "", " ", إلخ
+                email = p[1];
             }
 
-            // fine parsing (safe)
             double fine = 0.0;
             try {
                 fine = Double.parseDouble(p[2]);
             } catch (Exception e) {
-                fine = 0.0; // لو "notNumber"
+                fine = 0.0;
             }
 
             User u = new User(name, email);
@@ -110,10 +130,12 @@ public class UserService {
         }
     }
 
-    // ---------------------------------------------------------
-    // Finders
-    // ---------------------------------------------------------
-
+    /**
+     * Searches for a user by name (case-insensitive).
+     *
+     * @param name the name to search for
+     * @return the matching User or null if none found
+     */
     public User findUserByName(String name) {
         if (name == null) return null;
 
@@ -126,15 +148,25 @@ public class UserService {
         return null;
     }
 
+    /**
+     * Returns a copy of the full user list.
+     *
+     * @return a new List containing all users
+     */
     public List<User> getAllUsers() {
         return new ArrayList<>(users);
     }
 
-    // ---------------------------------------------------------
-    // Borrow Eligibility (Sprint 4)
-    // ---------------------------------------------------------
-
-    /** ✔ النسخة المعدّلة لإزالة NullPointerException */
+    /**
+     * Checks whether a user is eligible to borrow an item.
+     * Rules:
+     * - user must not be null
+     * - no unpaid fines
+     * - no overdue loans
+     *
+     * @param user the user to check
+     * @return true if user is allowed to borrow
+     */
     public boolean canBorrow(User user) {
 
         if (user == null)
@@ -146,10 +178,15 @@ public class UserService {
         return !user.hasOverdueLoans();
     }
 
-    // ---------------------------------------------------------
-    // Unregister User (Sprint 4)
-    // ---------------------------------------------------------
-
+    /**
+     * Attempts to unregister a user from the system.
+     * A user can only be unregistered if:
+     * - they have no active loans
+     * - they owe no outstanding fines
+     *
+     * @param user the user to remove
+     * @return true if removed successfully, false otherwise
+     */
     public boolean unregisterUser(User user) {
 
         if (user == null) return false;
@@ -158,7 +195,6 @@ public class UserService {
             return false;
         }
 
-        // remove will fail if the given object instance is not the SAME instance
         return users.remove(user);
     }
 }

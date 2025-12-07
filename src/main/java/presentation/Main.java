@@ -6,40 +6,50 @@ import service.*;
 import java.util.List;
 import java.util.Scanner;
 
+/**
+ * The main entry point of the Library Management System.
+ *
+ * This class provides a console-based UI for interacting with the system.
+ * It allows the user to:
+ * - manage users
+ * - manage books
+ * - borrow and return items
+ * - view overdue items
+ * - send reminder notifications
+ *
+ * It creates and initializes all service classes, loads data from files,
+ * and then enters a main menu loop that handles user commands.
+ */
 public class Main {
 
     private static final Scanner input = new Scanner(System.in);
-
-    // Colors (console only)
     private static final String RED = "\u001B[31m";
     private static final String GREEN = "\u001B[32m";
     private static final String CYAN = "\u001B[36m";
     private static final String YELLOW = "\u001B[33m";
     private static final String RESET = "\u001B[0m";
 
+    /**
+     * Program entry point.
+     * Creates all services, loads saved data from files, and starts the main menu loop.
+     */
     public static void main(String[] args) {
 
-        // Create services
         UserService userService = new UserService();
         BookService bookService = new BookService();
         LoanService loanService = new LoanService(bookService, userService);
         CDLoanService cdLoanService = new CDLoanService(bookService, userService);
         ReminderService reminderService = new ReminderService();
-
-        // IMPORTANT: Load all saved data from files
         userService.loadUsersFromFile();
         bookService.loadBooksFromFile();
         loanService.loadLoansFromFile();
-        cdLoanService.loadCDLoansFromFile(List.of()); // modify if needed
-
-        // Library Facade
+        cdLoanService.loadCDLoansFromFile(List.of());
         LibraryService library = new LibraryService(
                 userService, bookService, loanService, cdLoanService, reminderService
         );
 
         System.out.println(GREEN + "\nLoaded all data from files successfully.\n" + RESET);
 
-        // Main Loop
         while (true) {
             System.out.println(CYAN + "\n========== LIBRARY MENU ==========" + RESET);
             System.out.println("1) Users Menu");
@@ -69,10 +79,11 @@ public class Main {
         }
     }
 
-    // ================================================
-    // USERS MENU
-    // ================================================
-
+    /**
+     * Displays the Users menu and handles:
+     * - adding users
+     * - listing registered users
+     */
     private static void usersMenu(UserService us) {
         while (true) {
             System.out.println(CYAN + "\n----- USERS MENU -----" + RESET);
@@ -104,10 +115,11 @@ public class Main {
         }
     }
 
-    // ================================================
-    // BOOKS MENU
-    // ================================================
-
+    /**
+     * Handles book management:
+     * - adding books
+     * - listing all books
+     */
     private static void booksMenu(BookService bs) {
         while (true) {
             System.out.println(CYAN + "\n----- BOOKS MENU -----" + RESET);
@@ -141,19 +153,22 @@ public class Main {
         }
     }
 
-    // ================================================
-    // CDs MENU (Optional)
-    // ================================================
-
+    /**
+     * Placeholder CD menu.
+     * CD management is not implemented through the UI, since CDs
+     * are added manually and not dynamically through the interface.
+     */
     private static void cdsMenu() {
         System.out.println(RED + "CD MENU is not implemented because CDs are added manually in code." + RESET);
         System.out.println("Use CDLoanService to borrow CDs directly.");
     }
 
-    // ================================================
-    // LOANS MENU
-    // ================================================
-
+    /**
+     * Handles all loan-related user interactions:
+     * - borrow book / CD
+     * - return book / CD
+     * - list active loans
+     */
     private static void loansMenu(LibraryService lib) {
         while (true) {
             System.out.println(CYAN + "\n----- LOANS MENU -----" + RESET);
@@ -178,6 +193,9 @@ public class Main {
         }
     }
 
+    /**
+     * Prompts the user to borrow a book.
+     */
     private static void borrowBook(LibraryService lib) {
         System.out.print("User name: ");
         String uname = input.nextLine();
@@ -203,6 +221,9 @@ public class Main {
             System.out.println(RED + "Borrow failed (rules violation)." + RESET);
     }
 
+    /**
+     * Handles returning a borrowed book.
+     */
     private static void returnBook(LibraryService lib) {
         System.out.print("Book ISBN: ");
         String isbn = input.nextLine();
@@ -226,25 +247,33 @@ public class Main {
             System.out.println(RED + "Return failed." + RESET);
     }
 
+    /**
+     * Borrowing CDs is not implemented in the console UI.
+     */
     private static void borrowCD(LibraryService lib) {
         System.out.print("User name: ");
         String uname = input.nextLine();
         System.out.println(RED + "CD borrowing not implemented." + RESET);
     }
 
+    /**
+     * Returning CDs is not implemented in the console UI.
+     */
     private static void returnCD(LibraryService lib) {
         System.out.println(RED + "CD return not implemented." + RESET);
     }
 
+    /**
+     * Lists all active book loans.
+     */
     private static void listLoans(LibraryService lib) {
         System.out.println(CYAN + "\n--- LOANS ---" + RESET);
         lib.getAllLoans().forEach(System.out::println);
     }
 
-    // ================================================
-    // OVERDUE + REMINDERS
-    // ================================================
-
+    /**
+     * Shows all overdue book and CD loans.
+     */
     private static void showOverdue(LibraryService lib) {
         List<Loan> books = lib.getOverdueLoans();
         List<CDLoan> cds = lib.getOverdueCDLoans();
@@ -256,11 +285,20 @@ public class Main {
         cds.forEach(System.out::println);
     }
 
+    /**
+     * Triggers sending reminders to all users with overdue items.
+     */
     private static void sendReminders(LibraryService lib) {
         lib.sendOverdueReminders();
         System.out.println(GREEN + "Reminders sent." + RESET);
     }
 
+    /**
+     * Reads an integer from console safely.
+     * Repeats until a valid number is entered.
+     *
+     * @return integer entered by user
+     */
     private static int getInt() {
         while (true) {
             try {

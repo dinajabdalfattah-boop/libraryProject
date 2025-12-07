@@ -7,38 +7,56 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This service class manages all CD loan operations in the library system.
+ * It handles creating new loans, returning CDs, saving loans to a file,
+ * loading loan data, and checking for overdue CD loans.
+ * Each loan is linked to a specific user and CD.
+ */
 public class CDLoanService {
 
     private final List<CDLoan> cdLoans = new ArrayList<>();
     private final BookService bookService;
     private final UserService userService;
-
     private static final String LOANS_FILE = "src/main/resources/data/cdloans.txt";
 
+    /**
+     * Creates a CDLoanService object with required dependencies.
+     *
+     * @param bookService service used for book operations (if needed)
+     * @param userService service used to find users by name
+     */
     public CDLoanService(BookService bookService, UserService userService) {
         this.bookService = bookService;
         this.userService = userService;
     }
 
-    // ---------------------------------------------------------
-    // CREATE CD LOAN
-    // ---------------------------------------------------------
-
+    /**
+     * Attempts to create a new CD loan for a given user and CD.
+     * Borrowing is only allowed if:
+     * - the user exists
+     * - the CD exists
+     * - the user has no unpaid fines
+     * - the user does not have any overdue loans
+     * - the CD is currently available
+     *
+     * If successful, the loan is added to the system and saved to the file.
+     *
+     * @param user the user borrowing the CD
+     * @param cd   the CD being borrowed
+     * @return true if the loan was successfully created, false otherwise
+     */
     public boolean createCDLoan(User user, CD cd) {
 
-        // NEW FIX — prevent NullPointerException
         if (user == null || cd == null) {
             return false;
         }
 
-        // Borrow restrictions
         if (user.getFineBalance() > 0) return false;
         if (user.hasOverdueLoans()) return false;
 
-        // Prevent borrowing an already borrowed CD
         if (!cd.isAvailable()) return false;
 
-        // Create loan
         CDLoan loan = new CDLoan(user, cd);
 
         user.addCDLoan(loan);
@@ -49,10 +67,16 @@ public class CDLoanService {
         return true;
     }
 
-    // ---------------------------------------------------------
-    // RETURN CD LOAN
-    // ---------------------------------------------------------
 
+    /**
+     * Returns a borrowed CD by marking the matching loan as completed.
+     * The method searches for a loan belonging to the user and CD,
+     * and only returns it if the loan is still active.
+     *
+     * @param user the user returning the CD
+     * @param cd   the CD being returned
+     * @return true if the CD was returned successfully, false otherwise
+     */
     public boolean returnCDLoan(User user, CD cd) {
 
         for (CDLoan loan : cdLoans) {
@@ -69,10 +93,14 @@ public class CDLoanService {
         return false;
     }
 
-    // ---------------------------------------------------------
-    // SAVE TO FILE
-    // ---------------------------------------------------------
 
+    /**
+     * Saves a single CD loan into the loan file.
+     * Each line contains:
+     * username, cdId, borrowDate, dueDate, activeStatus
+     *
+     * @param loan the loan to save
+     */
     private void saveLoanToFile(CDLoan loan) {
 
         String line = String.join(",",
@@ -86,10 +114,19 @@ public class CDLoanService {
         FileManager.appendLine(LOANS_FILE, line);
     }
 
-    // ---------------------------------------------------------
-    // LOAD FROM FILE
-    // ---------------------------------------------------------
-
+    /**
+     * Loads all CD loans from the loan file.
+     * For each line, the method:
+     *  - finds the user by name
+     *  - finds the CD by its ID
+     *  - recreates the loan object
+     *  - restores borrow and due dates
+     *  - restores active/inactive status
+     *
+     * If a referenced user or CD is missing, the loan is skipped.
+     *
+     * @param cds list of all CDs currently in the system
+     */
     public void loadCDLoansFromFile(List<CD> cds) {
 
         cdLoans.clear();
@@ -128,10 +165,11 @@ public class CDLoanService {
         }
     }
 
-    // ---------------------------------------------------------
-    // OVERDUE
-    // ---------------------------------------------------------
-
+    /**
+     * Returns a list of all CD loans that are currently overdue.
+     *
+     * @return a list of overdue CDLoan objects
+     */
     public List<CDLoan> getOverdueCDLoans() {
         List<CDLoan> result = new ArrayList<>();
 
@@ -143,10 +181,11 @@ public class CDLoanService {
         return result;
     }
 
-    // ---------------------------------------------------------
-    // GETTERS
-    // ---------------------------------------------------------
-
+    /**
+     * Returns all CD loans stored in the system.
+     *
+     * @return the list of CD loans
+     */
     public List<CDLoan> getAllCDLoans() {
         return cdLoans;
     }

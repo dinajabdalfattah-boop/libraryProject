@@ -11,7 +11,6 @@ import java.util.List;
  */
 public class MockNotifier implements Observer {
 
-    /** Stores all messages sent to users */
     private final List<String> messages = new ArrayList<>();
 
     /**
