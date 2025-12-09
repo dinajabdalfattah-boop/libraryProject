@@ -36,12 +36,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # 4️⃣ Build + Test → هنا Maven بعمل compile و tests
-      # رح يولّد ملفات .class داخل target/classes
+      # 4️⃣ Build + Tests (هذا اللي بطلّع jacoco.xml)
       - name: Build with Maven
         run: mvn -B clean verify
 
-      # 5️⃣ SonarCloud Scan
+      # 5️⃣ SonarCloud Scan مع إعدادات الكوفرج والاستثناءات
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
@@ -52,3 +51,5 @@ jobs:
             -Dsonar.projectKey=dinajabdalfattah-boop_libraryProject
             -Dsonar.organization=dinajabdalfattah-boop
             -Dsonar.java.binaries=target/classes
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            -Dsonar.coverage.exclusions=**/presentation/**,**/file/**,**/notification/**
