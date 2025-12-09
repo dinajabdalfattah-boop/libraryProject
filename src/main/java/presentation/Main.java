@@ -22,6 +22,7 @@ import java.util.logging.Logger;
  * and then enters a main menu loop that handles user commands.
  */
 public class Main {
+    private static final String ENTER_CHOICE = "Enter choice: ";
 
     private static final Scanner input = new Scanner(System.in);
     private static final String RED = "\u001B[31m";
@@ -64,7 +65,7 @@ public class Main {
             LOGGER.info("5) Overdue Items");
             LOGGER.info("6) Send Reminders");
             LOGGER.info("7) Exit");
-            LOGGER.info(YELLOW + "Enter choice: " + RESET);
+            LOGGER.info(YELLOW + ENTER_CHOICE+ RESET);
 
             int choice = getInt();
 
@@ -95,7 +96,7 @@ public class Main {
             LOGGER.info("1) Add User");
             LOGGER.info("2) List Users");
             LOGGER.info("3) Back");
-            LOGGER.info(YELLOW + "Enter choice: " + RESET);
+            LOGGER.info(YELLOW + ENTER_CHOICE + RESET);
 
             int c = getInt();
             switch (c) {
@@ -134,7 +135,7 @@ public class Main {
             LOGGER.info("1) Add Book");
             LOGGER.info("2) List Books");
             LOGGER.info("3) Back");
-            LOGGER.info(YELLOW + "Enter choice: " + RESET);
+            LOGGER.info(YELLOW + ENTER_CHOICE+ RESET);
 
             int c = getInt();
             switch (c) {
@@ -190,7 +191,7 @@ public class Main {
             LOGGER.info("4) Return CD");
             LOGGER.info("5) List Loans");
             LOGGER.info("6) Back");
-            LOGGER.info(YELLOW + "Enter choice: " + RESET);
+            LOGGER.info(YELLOW + ENTER_CHOICE + RESET);
 
             int c = getInt();
             switch (c) {
