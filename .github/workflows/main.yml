@@ -52,4 +52,5 @@ jobs:
             -Dsonar.organization=dinajabdalfattah-boop
             -Dsonar.java.binaries=target/classes
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-            -Dsonar.coverage.exclusions=**/presentation/**,**/file/**,**/notification/**
+            -Dsonar.coverage.exclusions=**/presentation/**,**/file/**,**/notification/**,**/*Test.java
+
