@@ -28,6 +28,13 @@
         <sonar.coverage.jacoco.xmlReportPaths>
             ${project.basedir}/target/site/jacoco/jacoco.xml
         </sonar.coverage.jacoco.xmlReportPaths>
+
+        <!-- ⭐ استثناء ملفات/باكجات من الـ coverage -->
+        <sonar.coverage.exclusions>
+            **/presentation/**
+            **/file/**
+            **/notification/**
+        </sonar.coverage.exclusions>
     </properties>
 
     <dependencies>
