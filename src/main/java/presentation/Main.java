@@ -29,7 +29,9 @@ public class Main {
     private static final String CYAN = "\u001B[36m";
     private static final String YELLOW = "\u001B[33m";
     private static final String RESET = "\u001B[0m";
+
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
+
     /**
      * Program entry point.
      * Creates all services, loads saved data from files, and starts the main menu loop.
@@ -41,10 +43,12 @@ public class Main {
         LoanService loanService = new LoanService(bookService, userService);
         CDLoanService cdLoanService = new CDLoanService(bookService, userService);
         ReminderService reminderService = new ReminderService();
+
         userService.loadUsersFromFile();
         bookService.loadBooksFromFile();
         loanService.loadLoansFromFile();
         cdLoanService.loadCDLoansFromFile(List.of());
+
         LibraryService library = new LibraryService(
                 userService, bookService, loanService, cdLoanService, reminderService
         );
@@ -75,7 +79,7 @@ public class Main {
                     LOGGER.info(GREEN + "Goodbye!" + RESET);
                     return;
                 }
-                default ->LOGGER.info(RED + "Invalid option!" + RESET);
+                default -> LOGGER.warning(RED + "Invalid option!" + RESET);
             }
         }
     }
@@ -98,20 +102,23 @@ public class Main {
                 case 1 -> {
                     LOGGER.info("Enter name: ");
                     String name = input.nextLine();
-                    System.out.print("Enter email: ");
+                    LOGGER.info("Enter email: ");
                     String email = input.nextLine();
 
-                    if (us.addUser(name, email))
-                        System.out.println(GREEN + "User added." + RESET);
-                    else
-                        System.out.println(RED + "User already exists!" + RESET);
+                    if (us.addUser(name, email)) {
+                        LOGGER.info(GREEN + "User added." + RESET);
+                    } else {
+                        LOGGER.warning(RED + "User already exists!" + RESET);
+                    }
                 }
                 case 2 -> {
-                    System.out.println(CYAN + "\n--- USERS ---" + RESET);
-                    us.getAllUsers().forEach(System.out::println);
+                    LOGGER.info(CYAN + "\n--- USERS ---" + RESET);
+                    us.getAllUsers().forEach(u -> LOGGER.info(u.toString()));
                 }
-                case 3 -> { return; }
-                default -> System.out.println(RED + "Invalid." + RESET);
+                case 3 -> {
+                    return;
+                }
+                default -> LOGGER.warning(RED + "Invalid." + RESET);
             }
         }
     }
@@ -123,33 +130,36 @@ public class Main {
      */
     private static void booksMenu(BookService bs) {
         while (true) {
-            System.out.println(CYAN + "\n----- BOOKS MENU -----" + RESET);
-            System.out.println("1) Add Book");
-            System.out.println("2) List Books");
-            System.out.println("3) Back");
-            System.out.print(YELLOW + "Enter choice: " + RESET);
+            LOGGER.info(CYAN + "\n----- BOOKS MENU -----" + RESET);
+            LOGGER.info("1) Add Book");
+            LOGGER.info("2) List Books");
+            LOGGER.info("3) Back");
+            LOGGER.info(YELLOW + "Enter choice: " + RESET);
 
             int c = getInt();
             switch (c) {
                 case 1 -> {
-                    System.out.print("Title: ");
+                    LOGGER.info("Title: ");
                     String title = input.nextLine();
-                    System.out.print("Author: ");
+                    LOGGER.info("Author: ");
                     String author = input.nextLine();
-                    System.out.print("ISBN: ");
+                    LOGGER.info("ISBN: ");
                     String isbn = input.nextLine();
 
-                    if (bs.addBook(title, author, isbn))
-                        System.out.println(GREEN + "Book added." + RESET);
-                    else
-                        System.out.println(RED + "ISBN already exists!" + RESET);
+                    if (bs.addBook(title, author, isbn)) {
+                        LOGGER.info(GREEN + "Book added." + RESET);
+                    } else {
+                        LOGGER.warning(RED + "ISBN already exists!" + RESET);
+                    }
                 }
                 case 2 -> {
-                    System.out.println(CYAN + "\n--- BOOKS ---" + RESET);
-                    bs.getAllBooks().forEach(System.out::println);
+                    LOGGER.info(CYAN + "\n--- BOOKS ---" + RESET);
+                    bs.getAllBooks().forEach(b -> LOGGER.info(b.toString()));
                 }
-                case 3 -> { return; }
-                default -> System.out.println(RED + "Invalid." + RESET);
+                case 3 -> {
+                    return;
+                }
+                default -> LOGGER.warning(RED + "Invalid." + RESET);
             }
         }
     }
@@ -160,8 +170,8 @@ public class Main {
      * are added manually and not dynamically through the interface.
      */
     private static void cdsMenu() {
-        System.out.println(RED + "CD MENU is not implemented because CDs are added manually in code." + RESET);
-        System.out.println("Use CDLoanService to borrow CDs directly.");
+        LOGGER.warning(RED + "CD MENU is not implemented because CDs are added manually in code." + RESET);
+        LOGGER.warning("Use CDLoanService to borrow CDs directly.");
     }
 
     /**
@@ -172,14 +182,14 @@ public class Main {
      */
     private static void loansMenu(LibraryService lib) {
         while (true) {
-            System.out.println(CYAN + "\n----- LOANS MENU -----" + RESET);
-            System.out.println("1) Borrow Book");
-            System.out.println("2) Borrow CD");
-            System.out.println("3) Return Book");
-            System.out.println("4) Return CD");
-            System.out.println("5) List Loans");
-            System.out.println("6) Back");
-            System.out.print(YELLOW + "Enter choice: " + RESET);
+            LOGGER.info(CYAN + "\n----- LOANS MENU -----" + RESET);
+            LOGGER.info("1) Borrow Book");
+            LOGGER.info("2) Borrow CD");
+            LOGGER.info("3) Return Book");
+            LOGGER.info("4) Return CD");
+            LOGGER.info("5) List Loans");
+            LOGGER.info("6) Back");
+            LOGGER.info(YELLOW + "Enter choice: " + RESET);
 
             int c = getInt();
             switch (c) {
@@ -188,8 +198,10 @@ public class Main {
                 case 3 -> returnBook(lib);
                 case 4 -> returnCD(lib);
                 case 5 -> listLoans(lib);
-                case 6 -> { return; }
-                default -> System.out.println(RED + "Invalid." + RESET);
+                case 6 -> {
+                    return;
+                }
+                default -> LOGGER.warning(RED + "Invalid." + RESET);
             }
         }
     }
@@ -198,78 +210,80 @@ public class Main {
      * Prompts the user to borrow a book.
      */
     private static void borrowBook(LibraryService lib) {
-        System.out.print("User name: ");
+        LOGGER.info("User name: ");
         String uname = input.nextLine();
         User user = lib.findUserByName(uname);
 
         if (user == null) {
-            System.out.println(RED + "User not found!" + RESET);
+            LOGGER.warning(RED + "User not found!" + RESET);
             return;
         }
 
-        System.out.print("Book ISBN: ");
+        LOGGER.info("Book ISBN: ");
         String isbn = input.nextLine();
         Book book = lib.findBookByISBN(isbn);
 
         if (book == null) {
-            System.out.println(RED + "Book not found!" + RESET);
+            LOGGER.warning(RED + "Book not found!" + RESET);
             return;
         }
 
-        if (lib.borrowBook(user, book))
-            System.out.println(GREEN + "Book borrowed." + RESET);
-        else
-            System.out.println(RED + "Borrow failed (rules violation)." + RESET);
+        if (lib.borrowBook(user, book)) {
+            LOGGER.info(GREEN + "Book borrowed." + RESET);
+        } else {
+            LOGGER.warning(RED + "Borrow failed (rules violation)." + RESET);
+        }
     }
 
     /**
      * Handles returning a borrowed book.
      */
     private static void returnBook(LibraryService lib) {
-        System.out.print("Book ISBN: ");
+        LOGGER.info("Book ISBN: ");
         String isbn = input.nextLine();
         Book book = lib.findBookByISBN(isbn);
 
         if (book == null) {
-            System.out.println(RED + "Book not found!" + RESET);
+            LOGGER.warning(RED + "Book not found!" + RESET);
             return;
         }
 
         User borrower = lib.findLoanUser(book);
 
         if (borrower == null) {
-            System.out.println(RED + "Book is not currently borrowed." + RESET);
+            LOGGER.warning(RED + "Book is not currently borrowed." + RESET);
             return;
         }
 
-        if (lib.returnBook(borrower, book))
-            System.out.println(GREEN + "Book returned." + RESET);
-        else
-            System.out.println(RED + "Return failed." + RESET);
+        if (lib.returnBook(borrower, book)) {
+            LOGGER.info(GREEN + "Book returned." + RESET);
+        } else {
+            LOGGER.warning(RED + "Return failed." + RESET);
+        }
     }
 
     /**
      * Borrowing CDs is not implemented in the console UI.
      */
     private static void borrowCD(LibraryService lib) {
-        System.out.print("User name: ");
+        LOGGER.info("User name: ");
         String uname = input.nextLine();
-        System.out.println(RED + "CD borrowing not implemented." + RESET);
+        LOGGER.warning(RED + "CD borrowing not implemented." + RESET);
     }
 
     /**
      * Returning CDs is not implemented in the console UI.
      */
     private static void returnCD(LibraryService lib) {
-        System.out.println(RED + "CD return not implemented." + RESET);
+        LOGGER.warning(RED + "CD return not implemented." + RESET);
     }
 
     /**
      * Lists all active book loans.
      */
     private static void listLoans(LibraryService lib) {
-        System.out.println(CYAN + "\n--- LOANS ---" + RESET);
-        lib.getAllLoans().forEach(System.out::println);
+        LOGGER.info(CYAN + "\n--- LOANS ---" + RESET);
+        lib.getAllLoans().forEach(l -> LOGGER.info(l.toString()));
     }
 
     /**
@@ -279,11 +293,11 @@ public class Main {
         List<Loan> books = lib.getOverdueLoans();
         List<CDLoan> cds = lib.getOverdueCDLoans();
 
-        System.out.println(CYAN + "\n--- OVERDUE BOOKS ---" + RESET);
-        books.forEach(System.out::println);
+        LOGGER.info(CYAN + "\n--- OVERDUE BOOKS ---" + RESET);
+        books.forEach(b -> LOGGER.info(b.toString()));
 
-        System.out.println(CYAN + "\n--- OVERDUE CDs ---" + RESET);
-        cds.forEach(System.out::println);
+        LOGGER.info(CYAN + "\n--- OVERDUE CDs ---" + RESET);
+        cds.forEach(c -> LOGGER.info(c.toString()));
     }
 
     /**
@@ -291,7 +305,7 @@ public class Main {
      */
     private static void sendReminders(LibraryService lib) {
         lib.sendOverdueReminders();
-        System.out.println(GREEN + "Reminders sent." + RESET);
+        LOGGER.info(GREEN + "Reminders sent." + RESET);
     }
 
     /**
@@ -305,7 +319,7 @@ public class Main {
             try {
                 return Integer.parseInt(input.nextLine());
             } catch (Exception e) {
-                System.out.print(YELLOW + "Enter number: " + RESET);
+                LOGGER.info(YELLOW + "Enter number: " + RESET);
             }
         }
     }
