@@ -22,6 +22,12 @@
         <sonar.organization>dinajabdalfattah-boop</sonar.organization>
         <sonar.projectKey>dinajabdalfattah-boop_libraryProject</sonar.projectKey>
         <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+
+        <!-- ⭐ JaCoCo + Sonar coverage -->
+        <jacoco.version>0.8.11</jacoco.version>
+        <sonar.coverage.jacoco.xmlReportPaths>
+            ${project.basedir}/target/site/jacoco/jacoco.xml
+        </sonar.coverage.jacoco.xmlReportPaths>
     </properties>
 
     <dependencies>
@@ -90,6 +96,34 @@
 
             </plugins>
         </pluginManagement>
+
+        <!-- ⭐ هنا بنشغّل JaCoCo فعلياً -->
+        <plugins>
+
+            <!-- JaCoCo plugin -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <!-- يضيف الجافا أيجنت للتستات -->
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <!-- يولّد تقرير coverage (jacoco.xml) بعد مرحلة test -->
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
     </build>
 
 </project>
