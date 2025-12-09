@@ -14,7 +14,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       # 1️⃣ اسحب الكود من GitHub
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,7 +29,6 @@ jobs:
 
       # 3️⃣ Cache لمكتبة maven لتحسين السرعة
       - name: Cache Maven packages
-      ...
         uses: actions/cache@v4
         with:
           path: ~/.m2
