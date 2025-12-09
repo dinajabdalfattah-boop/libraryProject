@@ -1,2 +1,1 @@
-A,a@mail.com,0.0
-B,b@mail.com,0.0
+Ahmad,a@a.com,0.0

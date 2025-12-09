@@ -6,104 +6,276 @@ import domain.User;
 import file.FileManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
 import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Method;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.*;
 
+/**
+ * Tests for CDLoanService.
+ */
+@ExtendWith(MockitoExtension.class)
 public class CDLoanServiceTest {
+
+    @Mock
+    private BookService bookService;
+
+    @Mock
+    private UserService userService;
+
+    @Mock
+    private User user;
+
+    @Mock
+    private CD cd;
 
     private CDLoanService cdLoanService;
 
     @BeforeEach
     void setUp() {
-        // BookService مش مستخدم هون، فينا نمرره null
-        cdLoanService = new CDLoanService(null, new UserService());
-        // لو UserService عندك بدو إعدادات خاصة، استخدمي نسخة الموك تبعتك
+        cdLoanService = new CDLoanService(bookService, userService);
     }
 
     // ---------------------------------------------------------
-    // 1) تغطية if (loan == null || ... ) في saveLoanToFile
+    // createCDLoan tests
     // ---------------------------------------------------------
 
     @Test
-    void testSaveLoanToFileIgnoresNullLoan() throws Exception {
-        // ننده على الميثود الخاصة عن طريق reflection
+    void testCreateCDLoanReturnsFalseWhenUserIsNull() {
+        boolean result = cdLoanService.createCDLoan(null, cd);
+        assertFalse(result);
+    }
+
+    @Test
+    void testCreateCDLoanReturnsFalseWhenCDIsNull() {
+        boolean result = cdLoanService.createCDLoan(user, null);
+        assertFalse(result);
+    }
+
+    @Test
+    void testCreateCDLoanReturnsFalseWhenUserHasFine() {
+        when(user.getFineBalance()).thenReturn(10.0);
+
+        boolean result = cdLoanService.createCDLoan(user, cd);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void testCreateCDLoanReturnsFalseWhenUserHasOverdueLoans() {
+        when(user.getFineBalance()).thenReturn(0.0);
+        when(user.hasOverdueLoans()).thenReturn(true);
+
+        boolean result = cdLoanService.createCDLoan(user, cd);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void testCreateCDLoanReturnsFalseWhenCDNotAvailable() {
+        when(user.getFineBalance()).thenReturn(0.0);
+        when(user.hasOverdueLoans()).thenReturn(false);
+        when(cd.isAvailable()).thenReturn(false);
+
+        boolean result = cdLoanService.createCDLoan(user, cd);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void testCreateCDLoanSuccess() {
+        when(user.getFineBalance()).thenReturn(0.0);
+        when(user.hasOverdueLoans()).thenReturn(false);
+        when(cd.isAvailable()).thenReturn(true);
+
+        // ما بدنا FileManager يكتب على الديسك فعلياً
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            boolean result = cdLoanService.createCDLoan(user, cd);
+
+            assertTrue(result);
+            assertEquals(1, cdLoanService.getAllCDLoans().size());
+            verify(user, times(1)).addCDLoan(any(CDLoan.class));
+            fm.verify(() -> FileManager.appendLine(anyString(), anyString()), times(1));
+        }
+    }
+
+    // ---------------------------------------------------------
+    // returnCDLoan tests
+    // ---------------------------------------------------------
+
+    @Test
+    void testReturnCDLoanReturnsFalseWhenUserOrCDIsNull() {
+        assertFalse(cdLoanService.returnCDLoan(null, cd));
+        assertFalse(cdLoanService.returnCDLoan(user, null));
+    }
+
+    @Test
+    void testReturnCDLoanReturnsFalseWhenNoMatchingLoan() {
+        // user و cd مختلفين عن اللي رح نستخدمهم في createCDLoan
+        User anotherUser = mock(User.class);
+        CD anotherCd = mock(CD.class);
+
+        when(anotherUser.getFineBalance()).thenReturn(0.0);
+        when(anotherUser.hasOverdueLoans()).thenReturn(false);
+        when(anotherCd.isAvailable()).thenReturn(true);
+
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            cdLoanService.createCDLoan(anotherUser, anotherCd);
+        }
+
+        boolean result = cdLoanService.returnCDLoan(user, cd);
+
+        assertFalse(result);
+    }
+
+    @Test
+    void testReturnCDLoanSuccess() {
+        when(user.getFineBalance()).thenReturn(0.0);
+        when(user.hasOverdueLoans()).thenReturn(false);
+        when(cd.isAvailable()).thenReturn(true);
+
+        CDLoan loan;
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            cdLoanService.createCDLoan(user, cd);
+            loan = cdLoanService.getAllCDLoans().get(0);
+        }
+
+        assertTrue(loan.isActive());
+
+        boolean result = cdLoanService.returnCDLoan(user, cd);
+
+        assertTrue(result);
+        assertFalse(loan.isActive());
+        verify(user, times(1)).returnCDLoan(loan);
+    }
+
+    // ---------------------------------------------------------
+    // saveLoanToFile guard (loan == null)
+    // ---------------------------------------------------------
+
+    @Test
+    void testSaveLoanToFileWithNullLoanDoesNotThrow() throws Exception {
         Method m = CDLoanService.class.getDeclaredMethod("saveLoanToFile", CDLoan.class);
         m.setAccessible(true);
 
-        // لما نمرر null، المفروض ما يصير أي exception (ويرجع مباشرة)
         assertDoesNotThrow(() -> {
             try {
-                m.invoke(cdLoanService, (CDLoan) null);
+                m.invoke(cdLoanService, new Object[]{null});
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
     }
 
+    // ---------------------------------------------------------
+    // loadCDLoansFromFile tests
+    // ---------------------------------------------------------
+
     @Test
-    void testSaveLoanToFileIgnoresLoanWithNullUser() throws Exception {
-        // نعمل CD و CDLoan ببعض الحقول null
-
-        CD cd = new CD("CD1", "Artist1", "CD100");
-        // نمرر user = null
-        CDLoan loan = new CDLoan(null, cd);
-        loan.setBorrowDate(LocalDate.now());
-        loan.setDueDate(LocalDate.now().plusDays(7));
-
-        Method m = CDLoanService.class.getDeclaredMethod("saveLoanToFile", CDLoan.class);
-        m.setAccessible(true);
-
-        // عشان نتأكد إنه ما رح يكتب اشي للفايل، بنعمل static mock لـ FileManager.appendLine
+    void testLoadCDLoansFromFileWhenLinesNull() {
         try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
-            assertDoesNotThrow(() -> {
-                try {
-                    m.invoke(cdLoanService, loan);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
+            fm.when(() -> FileManager.readLines(anyString())).thenReturn(null);
 
-            // نتأكد إنه ولا مرة نادى appendLine (يعني رجع من if)
-            fm.verifyNoInteractions();
+            List<CD> cds = new ArrayList<>();
+
+            assertDoesNotThrow(() -> cdLoanService.loadCDLoansFromFile(cds));
+            assertTrue(cdLoanService.getAllCDLoans().isEmpty());
         }
     }
 
-    // تقدري تعملي تستات مشابهة لـ null CD أو null borrowDate/dueDate لو حابة
-    // يكفي 1–2 منهم عشان Sonar يشوف الـ conditions بتنقاس
-
-
-    // ---------------------------------------------------------
-    // 2) تغطية if (line == null || line.isBlank()) و if (p.length < 5)
-    //    في loadCDLoansFromFile
-    // ---------------------------------------------------------
-
     @Test
-    void testLoadCDLoansFromFileSkipsNullBlankAndShortLines() {
-        List<CD> cds = Collections.emptyList();
+    void testLoadCDLoansFromFileSkipsInvalidLinesAndLoadsValidOnes() {
+        // CD حقيقي عشان mapping على id
+        CD realCD = new CD("CD1", "Artist1", "CD100");
+        List<CD> cds = new ArrayList<>();
+        cds.add(realCD);
 
-        // نعمل static mock لـ FileManager.readLines بحيث يرجع:
-        //  null        -> يغطي line == null
-        //  ""          -> يغطي line.isBlank()
-        //  "a,b"       -> يغطي p.length < 5
-        //  باقي الحالات ما بهمنا هون
+        // User حقيقي
+        User realUser = new User("UserA", "u@test.com");
+
         try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
             fm.when(() -> FileManager.readLines(anyString()))
                     .thenReturn(Arrays.asList(
-                            null,
-                            "",
-                            "only,two,columns"
+                            null,                             // line == null
+                            "",                               // line.isBlank()
+                            "bad,short,line",                 // p.length < 5
+                            "UserA,CD100,2024-01-01,2024-01-05,true" // valid
                     ));
 
-            assertDoesNotThrow(() -> cdLoanService.loadCDLoansFromFile(cds));
+            when(userService.findUserByName("UserA")).thenReturn(realUser);
+
+            cdLoanService.loadCDLoansFromFile(cds);
+
+            List<CDLoan> allLoans = cdLoanService.getAllCDLoans();
+            assertEquals(1, allLoans.size());
+
+            CDLoan loan = allLoans.get(0);
+            assertEquals(realUser, loan.getUser());
+            assertEquals(realCD, loan.getCD());
+            assertEquals(LocalDate.parse("2024-01-01"), loan.getBorrowDate());
+            assertEquals(LocalDate.parse("2024-01-05"), loan.getDueDate());
+            assertTrue(loan.isActive());
+
+            // تأكيد إنه اليوزر صار عنده CDLoan واحد active
+            assertEquals(1, realUser.getActiveCDLoans().size());
         }
+    }
+
+    // ---------------------------------------------------------
+    // getOverdueCDLoans tests
+    // ---------------------------------------------------------
+
+    @Test
+    void testGetOverdueCDLoansReturnsOnlyOverdueLoans() {
+        CDLoanService localService = new CDLoanService(bookService, userService);
+
+        User u = new User("UserA", "u@test.com");
+        CD cd1 = new CD("CD1", "Artist1", "CD100");
+        CD cd2 = new CD("CD2", "Artist2", "CD200");
+
+        CDLoan loan1 = new CDLoan(u, cd1);
+        CDLoan loan2 = new CDLoan(u, cd2);
+
+        // loan1 متأخر، loan2 مش متأخر
+        loan1.setDueDate(LocalDate.now().minusDays(3));
+        loan2.setDueDate(LocalDate.now().plusDays(3));
+
+        localService.getAllCDLoans().add(loan1);
+        localService.getAllCDLoans().add(loan2);
+
+        List<CDLoan> overdue = localService.getOverdueCDLoans();
+
+        assertEquals(1, overdue.size());
+        assertTrue(overdue.contains(loan1));
+        assertFalse(overdue.contains(loan2));
+    }
+
+    // ---------------------------------------------------------
+    // getAllCDLoans basic behavior
+    // ---------------------------------------------------------
+
+    @Test
+    void testGetAllCDLoansReflectsInternalList() {
+        assertTrue(cdLoanService.getAllCDLoans().isEmpty());
+
+        when(user.getFineBalance()).thenReturn(0.0);
+        when(user.hasOverdueLoans()).thenReturn(false);
+        when(cd.isAvailable()).thenReturn(true);
+
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            cdLoanService.createCDLoan(user, cd);
+        }
+
+        assertEquals(1, cdLoanService.getAllCDLoans().size());
     }
 }
