@@ -26,12 +26,22 @@ public class FileManagerTest {
 
     private void deleteRecursive(File f) {
         if (f.isDirectory()) {
-            for (File c : f.listFiles()) {
-                deleteRecursive(c);
+            File[] children = f.listFiles();
+            if (children != null) {
+                for (File c : children) {
+                    deleteRecursive(c);
+                }
             }
         }
-        f.delete();
+
+        boolean deleted = f.delete();
+
+        // لو الملف لسا موجود و delete رجعت false → خلي التست يفشل
+        if (!deleted && f.exists()) {
+            fail("Failed to delete file: " + f.getAbsolutePath());
+        }
     }
+
 
     // ---------------------------------------------------------
     // readLines() tests
