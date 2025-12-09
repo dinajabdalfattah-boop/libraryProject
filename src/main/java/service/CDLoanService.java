@@ -67,7 +67,6 @@ public class CDLoanService {
         return true;
     }
 
-
     /**
      * Returns a borrowed CD by marking the matching loan as completed.
      * The method searches for a loan belonging to the user and CD,
@@ -79,10 +78,23 @@ public class CDLoanService {
      */
     public boolean returnCDLoan(User user, CD cd) {
 
+        if (user == null || cd == null) {
+            return false;
+        }
+
         for (CDLoan loan : cdLoans) {
 
-            if (loan.getUser().equals(user)
-                    && loan.getCD().equals(cd)
+            if (loan == null) continue;
+
+            User loanUser = loan.getUser();
+            CD loanCd = loan.getCD();
+
+            if (loanUser == null || loanCd == null) {
+                continue;
+            }
+
+            if (loanUser.equals(user)
+                    && loanCd.equals(cd)
                     && loan.isActive()) {
 
                 loan.returnCD();
@@ -93,7 +105,6 @@ public class CDLoanService {
         return false;
     }
 
-
     /**
      * Saves a single CD loan into the loan file.
      * Each line contains:
@@ -102,6 +113,15 @@ public class CDLoanService {
      * @param loan the loan to save
      */
     private void saveLoanToFile(CDLoan loan) {
+
+        if (loan == null
+                || loan.getUser() == null
+                || loan.getCD() == null
+                || loan.getBorrowDate() == null
+                || loan.getDueDate() == null) {
+            // لا نكتب سطر ناقص أو فيه null في الملف
+            return;
+        }
 
         String line = String.join(",",
                 loan.getUser().getUserName(),
@@ -135,9 +155,10 @@ public class CDLoanService {
         if (lines == null) return;
 
         for (String line : lines) {
-            if (line.isBlank()) continue;
+            if (line == null || line.isBlank()) continue;
 
             String[] p = line.split(",");
+            if (p.length < 5) continue;
 
             String userName = p[0];
             String cdId = p[1];
@@ -147,7 +168,7 @@ public class CDLoanService {
 
             User user = userService.findUserByName(userName);
             CD cd = cds.stream()
-                    .filter(c -> c.getId().equals(cdId))
+                    .filter(c -> c != null && c.getId().equals(cdId))
                     .findFirst()
                     .orElse(null);
 
@@ -161,7 +182,9 @@ public class CDLoanService {
 
             cdLoans.add(loan);
 
-            if (active) user.addCDLoan(loan);
+            if (active) {
+                user.addCDLoan(loan);
+            }
         }
     }
 
@@ -174,7 +197,7 @@ public class CDLoanService {
         List<CDLoan> result = new ArrayList<>();
 
         for (CDLoan loan : cdLoans) {
-            if (loan.isOverdue()) {
+            if (loan != null && loan.isOverdue()) {
                 result.add(loan);
             }
         }
