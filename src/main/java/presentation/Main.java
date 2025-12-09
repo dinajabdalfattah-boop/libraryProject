@@ -5,6 +5,7 @@ import service.*;
 
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Logger;
 
 /**
  * The main entry point of the Library Management System.
@@ -28,7 +29,7 @@ public class Main {
     private static final String CYAN = "\u001B[36m";
     private static final String YELLOW = "\u001B[33m";
     private static final String RESET = "\u001B[0m";
-
+    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     /**
      * Program entry point.
      * Creates all services, loads saved data from files, and starts the main menu loop.
@@ -48,18 +49,18 @@ public class Main {
                 userService, bookService, loanService, cdLoanService, reminderService
         );
 
-        System.out.println(GREEN + "\nLoaded all data from files successfully.\n" + RESET);
+        LOGGER.info(GREEN + "\nLoaded all data from files successfully.\n" + RESET);
 
         while (true) {
-            System.out.println(CYAN + "\n========== LIBRARY MENU ==========" + RESET);
-            System.out.println("1) Users Menu");
-            System.out.println("2) Books Menu");
-            System.out.println("3) CDs Menu");
-            System.out.println("4) Loans Menu");
-            System.out.println("5) Overdue Items");
-            System.out.println("6) Send Reminders");
-            System.out.println("7) Exit");
-            System.out.print(YELLOW + "Enter choice: " + RESET);
+            LOGGER.info(CYAN + "\n========== LIBRARY MENU ==========" + RESET);
+            LOGGER.info("1) Users Menu");
+            LOGGER.info("2) Books Menu");
+            LOGGER.info("3) CDs Menu");
+            LOGGER.info("4) Loans Menu");
+            LOGGER.info("5) Overdue Items");
+            LOGGER.info("6) Send Reminders");
+            LOGGER.info("7) Exit");
+            LOGGER.info(YELLOW + "Enter choice: " + RESET);
 
             int choice = getInt();
 
@@ -71,10 +72,10 @@ public class Main {
                 case 5 -> showOverdue(library);
                 case 6 -> sendReminders(library);
                 case 7 -> {
-                    System.out.println(GREEN + "Goodbye!" + RESET);
+                    LOGGER.info(GREEN + "Goodbye!" + RESET);
                     return;
                 }
-                default -> System.out.println(RED + "Invalid option!" + RESET);
+                default ->LOGGER.info(RED + "Invalid option!" + RESET);
             }
         }
     }
@@ -86,16 +87,16 @@ public class Main {
      */
     private static void usersMenu(UserService us) {
         while (true) {
-            System.out.println(CYAN + "\n----- USERS MENU -----" + RESET);
-            System.out.println("1) Add User");
-            System.out.println("2) List Users");
-            System.out.println("3) Back");
-            System.out.print(YELLOW + "Enter choice: " + RESET);
+            LOGGER.info(CYAN + "\n----- USERS MENU -----" + RESET);
+            LOGGER.info("1) Add User");
+            LOGGER.info("2) List Users");
+            LOGGER.info("3) Back");
+            LOGGER.info(YELLOW + "Enter choice: " + RESET);
 
             int c = getInt();
             switch (c) {
                 case 1 -> {
-                    System.out.print("Enter name: ");
+                    LOGGER.info("Enter name: ");
                     String name = input.nextLine();
                     System.out.print("Enter email: ");
                     String email = input.nextLine();
