@@ -61,6 +61,40 @@ public class CDLoanServiceTest {
         boolean result = cdLoanService.createCDLoan(user, null);
         assertFalse(result);
     }
+    @Test
+    void testLoadCDLoansFromFileInactiveLoanDoesNotStayActiveOnUser() {
+        // CD حقيقي ID مختلف عن التست السابق
+        CD cdInactive = new CD("CD2", "Artist2", "CD200");
+        List<CD> cds = new ArrayList<>();
+        cds.add(cdInactive);
+
+        // user حقيقي
+        User realUser = new User("UserA", "u@test.com");
+
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            // سطر واحد في الملف, last field = false  👈
+            fm.when(() -> FileManager.readLines(anyString()))
+                    .thenReturn(List.of(
+                            "UserA,CD200,2023-01-01,2023-01-05,false"
+                    ));
+
+            when(userService.findUserByName("UserA")).thenReturn(realUser);
+
+            cdLoanService.loadCDLoansFromFile(cds);
+
+            // يجب أن يكون في قرض واحد فقط
+            List<CDLoan> allLoans = cdLoanService.getAllCDLoans();
+            assertEquals(1, allLoans.size());
+
+            CDLoan loan = allLoans.get(0);
+
+            // لأنه active=false في الملف, لازم يكون القرض غير فعّال
+            assertFalse(loan.isActive());
+
+            // و ما ينضاف لقائمة الـ activeCDLoans عند اليوزر
+            assertTrue(realUser.getActiveCDLoans().isEmpty());
+        }
+    }
 
     @Test
     void testCreateCDLoanReturnsFalseWhenUserHasFine() {
