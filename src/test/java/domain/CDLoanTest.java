@@ -9,13 +9,19 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class CDLoanTest {
 
+    private static final String USER_NAME = "UserA";
+    private static final String USER_EMAIL = "u@test.com";
+    private static final String CD_TITLE = "CD1";
+    private static final String CD_ARTIST = "Artist1";
+    private static final String CD_CODE = "CD100";
+
     private User user;
     private CD cd;
 
     @BeforeEach
     public void setUp() {
-        user = new User("UserA", "u@test.com");
-        cd = new CD("CD1", "Artist1", "CD100");
+        user = new User(USER_NAME, USER_EMAIL);
+        cd = new CD(CD_TITLE, CD_ARTIST, CD_CODE);
     }
 
     // ---------------------------------------------------------
