@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       # 1️⃣ اسحب الكود من GitHub
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,7 +43,7 @@ jobs:
 
       # 5️⃣ SonarCloud Scan مع تفعيل الكوفرج + استثناء ملفات التست
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@a31c9398be7ace6bbfaf30c0bd5d415f843d45e9
+        uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
