@@ -14,20 +14,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       # 1️⃣ اسحب الكود من GitHub
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2️⃣ فعّلي JDK 17
+      # 2️⃣ فعّالي JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3️⃣ Cache لمجلد maven (.m2) عشان يسرّع الـ build
+      # 3️⃣ Cache لمكتبة maven لتحسين السرعة
       - name: Cache Maven packages
         uses: actions/cache@v4
         with:
@@ -36,11 +37,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # 4️⃣ Build + Tests (هذا اللي بطلّع jacoco.xml)
+      # 4️⃣ Build + Tests (هنا JaCoCo بعمل تقرير الكوفرج)
       - name: Build with Maven
         run: mvn -B clean verify
 
-      # 5️⃣ SonarCloud Scan مع إعدادات الكوفرج والاستثناءات
+      # 5️⃣ SonarCloud Scan مع تفعيل الكوفرج + استثناء ملفات التست
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5.0.0
         env:
@@ -52,5 +53,4 @@ jobs:
             -Dsonar.organization=dinajabdalfattah-boop
             -Dsonar.java.binaries=target/classes
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-            -Dsonar.coverage.exclusions=**/presentation/**,**/file/**,**/notification/**,**/*Test.java
-
+            -Dsonar.coverage.exclusions="**/presentation/**,**/file/**,**/notification/**,**/*Test.java"
