@@ -112,7 +112,7 @@ public class CDLoanService {
      *
      * @param loan the loan to save
      */
-    private void saveLoanToFile(CDLoan loan) {
+    void saveLoanToFile(CDLoan loan) {
 
         if (loan == null
                 || loan.getUser() == null

@@ -11,7 +11,6 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.lang.reflect.Method;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,18 +60,16 @@ public class CDLoanServiceTest {
         boolean result = cdLoanService.createCDLoan(user, null);
         assertFalse(result);
     }
+
     @Test
     void testLoadCDLoansFromFileInactiveLoanDoesNotStayActiveOnUser() {
-        // CD حقيقي ID مختلف عن التست السابق
         CD cdInactive = new CD("CD2", "Artist2", "CD200");
         List<CD> cds = new ArrayList<>();
         cds.add(cdInactive);
 
-        // user حقيقي
         User realUser = new User("UserA", "u@test.com");
 
         try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
-            // سطر واحد في الملف, last field = false  👈
             fm.when(() -> FileManager.readLines(anyString()))
                     .thenReturn(List.of(
                             "UserA,CD200,2023-01-01,2023-01-05,false"
@@ -82,16 +79,12 @@ public class CDLoanServiceTest {
 
             cdLoanService.loadCDLoansFromFile(cds);
 
-            // يجب أن يكون في قرض واحد فقط
             List<CDLoan> allLoans = cdLoanService.getAllCDLoans();
             assertEquals(1, allLoans.size());
 
             CDLoan loan = allLoans.get(0);
 
-            // لأنه active=false في الملف, لازم يكون القرض غير فعّال
             assertFalse(loan.isActive());
-
-            // و ما ينضاف لقائمة الـ activeCDLoans عند اليوزر
             assertTrue(realUser.getActiveCDLoans().isEmpty());
         }
     }
@@ -132,7 +125,6 @@ public class CDLoanServiceTest {
         when(user.hasOverdueLoans()).thenReturn(false);
         when(cd.isAvailable()).thenReturn(true);
 
-        // ما بدنا FileManager يكتب على الديسك فعلياً
         try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
             boolean result = cdLoanService.createCDLoan(user, cd);
 
@@ -155,7 +147,6 @@ public class CDLoanServiceTest {
 
     @Test
     void testReturnCDLoanReturnsFalseWhenNoMatchingLoan() {
-        // user و cd مختلفين عن اللي رح نستخدمهم في createCDLoan
         User anotherUser = mock(User.class);
         CD anotherCd = mock(CD.class);
 
@@ -198,17 +189,8 @@ public class CDLoanServiceTest {
     // ---------------------------------------------------------
 
     @Test
-    void testSaveLoanToFileWithNullLoanDoesNotThrow() throws Exception {
-        Method m = CDLoanService.class.getDeclaredMethod("saveLoanToFile", CDLoan.class);
-        m.setAccessible(true);
-
-        assertDoesNotThrow(() -> {
-            try {
-                m.invoke(cdLoanService, new Object[]{null});
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
+    void testSaveLoanToFileWithNullLoanDoesNotThrow() {
+        assertDoesNotThrow(() -> cdLoanService.saveLoanToFile(null));
     }
 
     // ---------------------------------------------------------
@@ -229,21 +211,19 @@ public class CDLoanServiceTest {
 
     @Test
     void testLoadCDLoansFromFileSkipsInvalidLinesAndLoadsValidOnes() {
-        // CD حقيقي عشان mapping على id
         CD realCD = new CD("CD1", "Artist1", "CD100");
         List<CD> cds = new ArrayList<>();
         cds.add(realCD);
 
-        // User حقيقي
         User realUser = new User("UserA", "u@test.com");
 
         try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
             fm.when(() -> FileManager.readLines(anyString()))
                     .thenReturn(Arrays.asList(
-                            null,                             // line == null
-                            "",                               // line.isBlank()
-                            "bad,short,line",                 // p.length < 5
-                            "UserA,CD100,2024-01-01,2024-01-05,true" // valid
+                            null,
+                            "",
+                            "bad,short,line",
+                            "UserA,CD100,2024-01-01,2024-01-05,true"
                     ));
 
             when(userService.findUserByName("UserA")).thenReturn(realUser);
@@ -260,7 +240,6 @@ public class CDLoanServiceTest {
             assertEquals(LocalDate.parse("2024-01-05"), loan.getDueDate());
             assertTrue(loan.isActive());
 
-            // تأكيد إنه اليوزر صار عنده CDLoan واحد active
             assertEquals(1, realUser.getActiveCDLoans().size());
         }
     }
@@ -280,7 +259,6 @@ public class CDLoanServiceTest {
         CDLoan loan1 = new CDLoan(u, cd1);
         CDLoan loan2 = new CDLoan(u, cd2);
 
-        // loan1 متأخر، loan2 مش متأخر
         loan1.setDueDate(LocalDate.now().minusDays(3));
         loan2.setDueDate(LocalDate.now().plusDays(3));
 
