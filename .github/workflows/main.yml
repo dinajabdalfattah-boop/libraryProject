@@ -27,7 +27,7 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # 3️⃣ Cache لمكتبة maven لتحسين السرعة
+      # 3️⃣ Cache لمكتبة maven
       - name: Cache Maven packages
         uses: actions/cache@v4
         with:
@@ -36,11 +36,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # 4️⃣ Build + Tests (هنا JaCoCo بعمل تقرير الكوفرج)
+      # ✅ 4️⃣ إنشاء ملف .env وهمي للتستات (هذا اللي بيحل المشكلة)
+      - name: Create fake .env for tests
+        run: |
+          echo "EMAIL_HOST=test" > .env
+          echo "EMAIL_PORT=1234" >> .env
+          echo "EMAIL_USERNAME=dummy" >> .env
+          echo "EMAIL_PASSWORD=dummy" >> .env
+
+      # 5️⃣ Build + Tests
       - name: Build with Maven
         run: mvn -B clean verify
 
-      # 5️⃣ SonarCloud Scan مع تفعيل الكوفرج + استثناء ملفات التست
+      # 6️⃣ SonarCloud Scan
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@0303d6b62e310685c0e34d0b9cde218036885c4d
         env:
