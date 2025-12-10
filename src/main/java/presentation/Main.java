@@ -31,6 +31,10 @@ public class Main {
     private static final String YELLOW = "\u001B[33m";
     private static final String RESET = "\u001B[0m";
 
+    // 🔁 Avoid duplicating "Invalid."
+    private static final String INVALID = "Invalid.";
+    private static final String INVALID_MSG = RED + INVALID + RESET;
+
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
     /**
@@ -65,7 +69,7 @@ public class Main {
             LOGGER.info("5) Overdue Items");
             LOGGER.info("6) Send Reminders");
             LOGGER.info("7) Exit");
-            LOGGER.info(YELLOW + ENTER_CHOICE+ RESET);
+            LOGGER.info(YELLOW + ENTER_CHOICE + RESET);
 
             int choice = getInt();
 
@@ -80,7 +84,7 @@ public class Main {
                     LOGGER.info(GREEN + "Goodbye!" + RESET);
                     return;
                 }
-                default -> LOGGER.warning(RED + "Invalid option!" + RESET);
+                default -> LOGGER.warning(INVALID_MSG);
             }
         }
     }
@@ -119,7 +123,7 @@ public class Main {
                 case 3 -> {
                     return;
                 }
-                default -> LOGGER.warning(RED + "Invalid." + RESET);
+                default -> LOGGER.warning(INVALID_MSG);
             }
         }
     }
@@ -135,7 +139,7 @@ public class Main {
             LOGGER.info("1) Add Book");
             LOGGER.info("2) List Books");
             LOGGER.info("3) Back");
-            LOGGER.info(YELLOW + ENTER_CHOICE+ RESET);
+            LOGGER.info(YELLOW + ENTER_CHOICE + RESET);
 
             int c = getInt();
             switch (c) {
@@ -153,7 +157,6 @@ public class Main {
                         LOGGER.warning(RED + "ISBN already exists!" + RESET);
                     }
                 }
-                //hi
                 case 2 -> {
                     LOGGER.info(CYAN + "\n--- BOOKS ---" + RESET);
                     bs.getAllBooks().forEach(b -> LOGGER.info(b.toString()));
@@ -161,7 +164,7 @@ public class Main {
                 case 3 -> {
                     return;
                 }
-                default -> LOGGER.warning(RED + "Invalid." + RESET);
+                default -> LOGGER.warning(INVALID_MSG);
             }
         }
     }
@@ -203,7 +206,7 @@ public class Main {
                 case 6 -> {
                     return;
                 }
-                default -> LOGGER.warning(RED + "Invalid." + RESET);
+                default -> LOGGER.warning(INVALID_MSG);
             }
         }
     }
