@@ -1,10 +1,1 @@
-Intro to Programming,auth1,9780132350884,true,null,null
-Networks Basics,auth2,9780201633610,true,null,null
-AI Fundamentals,auth3,9780201485677,true,null,null
-System Design,auth4,9780134685991,true,null,null
-Java Essentials,auth5,9780321573513,true,null,null
-Basics of DB,w,3,false,2025-12-11,2026-01-08
-Data Handling,author,10,false,2025-12-11,2026-01-08
-Web Guide,auth6,66,true,null,null
-Algorithms Notes,auth3,33,true,null,null
-calc,auth1,34,true,null,null
+T1,A1,111,true,null,null

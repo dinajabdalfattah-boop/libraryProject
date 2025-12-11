@@ -1,5 +1,1 @@
-ahmadAdmin,101,pass123
-dinaMaster,102,lib987
-samAdmin,103,root33
-rawanA,104,admin2025
-majdSuper,105,secure55
+AdminA,100,PassA

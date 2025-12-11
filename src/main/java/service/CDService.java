@@ -3,6 +3,7 @@ package service;
 import domain.CD;
 import file.FileManager;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,12 +37,28 @@ public class CDService {
                     c.getBorrowDate() == null ? "null" : c.getBorrowDate().toString(),
                     c.getDueDate() == null ? "null" : c.getDueDate().toString()
             );
-
             lines.add(line);
         }
 
         FileManager.writeLines(CD_FILE, lines);
     }
+
+    // ===== helpers =====
+    private boolean parseBooleanStrict(String s) {
+        if (s == null) return false;
+        s = s.trim();
+        if (s.isEmpty()) return false;
+        if (s.equalsIgnoreCase("null")) return false;
+        return Boolean.parseBoolean(s);
+    }
+
+    private LocalDate parseDateOrNull(String s) {
+        if (s == null) return null;
+        s = s.trim();
+        if (s.isEmpty() || s.equalsIgnoreCase("null")) return null;
+        return LocalDate.parse(s);
+    }
+    // ===================
 
     public void loadCDsFromFile() {
 
@@ -62,15 +79,29 @@ public class CDService {
 
             CD cd = new CD(p[0], p[1], p[2]);
 
-            cd.returnCD();
+            // ✅ availability from file (null => false)
+            String availableStr = (p.length > 3) ? p[3] : null;
+            boolean available = parseBooleanStrict(availableStr);
+
+            if (available) {
+                // available => ignore dates
+                cd.returnCD();
+            } else {
+                // borrowed => read dates
+                String borrowStr = (p.length > 4) ? p[4] : null;
+                String dueStr = (p.length > 5) ? p[5] : null;
+
+                cd.setBorrowDate(parseDateOrNull(borrowStr));
+                cd.setDueDate(parseDateOrNull(dueStr));
+
+                // mark as borrowed
+                cd.borrowCD(cd.getBorrowDate());
+            }
 
             cds.add(cd);
         }
     }
 
-    /**
-     * search() — EXACT for artist & ID, PARTIAL for title
-     */
     public List<CD> search(String keyword) {
 
         if (keyword == null)
@@ -86,19 +117,16 @@ public class CDService {
 
         for (CD c : cds) {
 
-            // title → partial
             if (c.getTitle().toLowerCase().contains(keyLower)) {
                 result.add(c);
                 continue;
             }
 
-            // artist → exact
             if (c.getArtist().equalsIgnoreCase(keyword)) {
                 result.add(c);
                 continue;
             }
 
-            // ID → exact
             if (c.getId().equals(keyword)) {
                 result.add(c);
             }

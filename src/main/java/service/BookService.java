@@ -3,6 +3,7 @@ package service;
 import domain.Book;
 import file.FileManager;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,6 +43,23 @@ public class BookService {
         FileManager.writeLines(BOOKS_FILE, lines);
     }
 
+    // null/blank/"null" => false
+    private boolean parseBooleanStrict(String s) {
+        if (s == null) return false;
+        s = s.trim();
+        if (s.isEmpty()) return false;
+        if (s.equalsIgnoreCase("null")) return false;
+        return Boolean.parseBoolean(s);
+    }
+
+    // null/blank/"null" => null
+    private LocalDate parseDateOrNull(String s) {
+        if (s == null) return null;
+        s = s.trim();
+        if (s.isEmpty() || s.equalsIgnoreCase("null")) return null;
+        return LocalDate.parse(s);
+    }
+
     public void loadBooksFromFile() {
 
         books.clear();
@@ -61,17 +79,26 @@ public class BookService {
 
             Book b = new Book(p[0], p[1], p[2]);
 
-            b.setAvailable(true);
-            b.setBorrowDate(null);
-            b.setDueDate(null);
+            // ✅ availability from file (null treated as false)
+            String availableStr = (p.length > 3) ? p[3] : null;
+            boolean available = parseBooleanStrict(availableStr);
+            b.setAvailable(available);
+
+            // ✅ IMPORTANT: if available==true => IGNORE dates and force null
+            if (available) {
+                b.setBorrowDate(null);
+                b.setDueDate(null);
+            } else {
+                String borrowStr = (p.length > 4) ? p[4] : null;
+                String dueStr = (p.length > 5) ? p[5] : null;
+                b.setBorrowDate(parseDateOrNull(borrowStr));
+                b.setDueDate(parseDateOrNull(dueStr));
+            }
 
             books.add(b);
         }
     }
 
-    /**
-     * search() — EXACT for author & ISBN, PARTIAL for title
-     */
     public List<Book> search(String keyword) {
 
         if (keyword == null)
@@ -87,19 +114,16 @@ public class BookService {
 
         for (Book b : books) {
 
-            // title → partial match
             if (b.getTitle().toLowerCase().contains(keyLower)) {
                 results.add(b);
                 continue;
             }
 
-            // author → exact only
             if (b.getAuthor().equalsIgnoreCase(keyword)) {
                 results.add(b);
                 continue;
             }
 
-            // ISBN → exact only
             if (b.getIsbn().equals(keyword)) {
                 results.add(b);
             }
