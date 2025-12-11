@@ -88,28 +88,24 @@ public class CDService {
 
         for (String line : lines) {
 
-            if (line.isBlank()) continue;
+            if (line == null || line.isBlank())
+                continue;
 
             String[] p = line.split(",");
 
-            if (p.length < 6) continue;
+            if (p.length < 3)
+                continue;
 
             CD cd = new CD(p[0], p[1], p[2]);
 
-            boolean available = Boolean.parseBoolean(p[3]);
-
-            if (!available) {
-                if (!p[4].equals("null"))
-                    cd.borrowCD(LocalDate.parse(p[4]));
-                if (!p[5].equals("null"))
-                    cd.setDueDate(LocalDate.parse(p[5]));
-            } else {
-                cd.returnCD();
-            }
+            // 👇 مهم: تأكد إن الـ CD مو مستعار أبداً بالبداية
+            cd.returnCD();   // يجعل available=true ويصفّر التواريخ
 
             cds.add(cd);
         }
     }
+
+
 
     /**
      * Searches for CDs using a case-insensitive keyword.

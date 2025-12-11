@@ -1,4 +1,4 @@
-Ali,ali@example.com,0.0
+Aesha,s12217274@stu.najah.edu,0.0
 Sara,sara@example.com,0.0
 Omar,omar@example.com,10.0
 Lina,null,0.0
