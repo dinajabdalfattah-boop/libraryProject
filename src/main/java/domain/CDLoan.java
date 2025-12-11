@@ -38,7 +38,6 @@ public class CDLoan {
         this.borrowDate = LocalDate.now();
         this.dueDate = borrowDate.plusDays(7);
 
-        // Mark the CD as borrowed in the CD object
         cd.borrowCD(borrowDate);
     }
 
@@ -60,8 +59,6 @@ public class CDLoan {
     public boolean isActive() {
         return active;
     }
-
-    // ---------- Overdue logic ----------
 
     /**
      * Checks if the loan is overdue when compared to a specific date.

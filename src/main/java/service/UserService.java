@@ -7,13 +7,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * This service handles all user-related operations in the library system.
+ * Provides services for managing users in the library system.
+ * This class supports adding users, saving/loading users from storage,
+ * finding users, checking borrowing eligibility, and unregistering users.
  */
 public class UserService {
 
     private final List<User> users = new ArrayList<>();
     private static final String USERS_FILE = "src/main/resources/data/users.txt";
 
+    /**
+     * Adds a new user to the system if the username does not already exist
+     * (case-insensitive). After a successful insert, data is persisted to file.
+     *
+     * @param name the user name
+     * @param email the user email address
+     * @return true if the user was added successfully, false otherwise
+     */
     public boolean addUser(String name, String email) {
 
         for (User u : users) {
@@ -26,17 +36,25 @@ public class UserService {
 
         User user = new User(name, email);
         users.add(user);
-        saveUsers();   // 🔥 حفظ تلقائي
+        saveUsers();
 
         return true;
     }
 
+    /**
+     * Adds a new user with a default email address.
+     *
+     * @param name the user name
+     * @return true if the user was added successfully, false otherwise
+     */
     public boolean addUser(String name) {
         return addUser(name, "no-email@none.com");
     }
 
     /**
-     * Changed to PUBLIC so Main/admin can call it 🔥
+     * Saves all users to the storage file using a comma-separated format:
+     * name,email,fineBalance
+     * If the email is null, it is stored as "null".
      */
     public void saveUsers() {
 
@@ -52,6 +70,10 @@ public class UserService {
         FileManager.writeLines(USERS_FILE, lines);
     }
 
+    /**
+     * Loads all users from the storage file into memory.
+     * Invalid or incomplete lines are ignored.
+     */
     public void loadUsersFromFile() {
 
         users.clear();
@@ -92,6 +114,12 @@ public class UserService {
         }
     }
 
+    /**
+     * Finds a user by name (case-insensitive).
+     *
+     * @param name the user name to search for
+     * @return the matching user, or null if not found
+     */
     public User findUserByName(String name) {
         if (name == null) return null;
 
@@ -104,10 +132,22 @@ public class UserService {
         return null;
     }
 
+    /**
+     * Returns a copy of all users currently loaded in memory.
+     *
+     * @return a list containing all users
+     */
     public List<User> getAllUsers() {
         return new ArrayList<>(users);
     }
 
+    /**
+     * Checks whether the given user can borrow new items.
+     * A user cannot borrow if they have unpaid fines or any overdue loans.
+     *
+     * @param user the user to check
+     * @return true if the user can borrow, false otherwise
+     */
     public boolean canBorrow(User user) {
 
         if (user == null)
@@ -119,11 +159,20 @@ public class UserService {
         return !user.hasOverdueLoans();
     }
 
+    /**
+     * Unregisters (removes) a user from the system if they meet the rules:
+     * - no unpaid fines
+     * - no active loans (books or CDs)
+     *
+     * If the user is removed successfully, the updated list is saved to storage.
+     *
+     * @param user the user to remove
+     * @return true if the user was removed successfully, false otherwise
+     */
     public boolean unregisterUser(User user) {
 
         if (user == null) return false;
 
-        // لا يمكن حذف مستخدم عنده لون active أو عليه fine
         if (!user.canBeUnregistered()) {
             return false;
         }
@@ -131,7 +180,7 @@ public class UserService {
         boolean removed = users.remove(user);
 
         if (removed) {
-            saveUsers(); // احفظ التغيير في الفايل
+            saveUsers();
         }
 
         return removed;

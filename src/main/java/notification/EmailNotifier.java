@@ -30,7 +30,6 @@ public class EmailNotifier implements Observer {
     @Override
     public void notify(User user, String message) {
 
-        // لا تبعت لو ما في يوزر
         if (user == null) {
             System.out.println("EmailNotifier: user is null, skipping.");
             return;
@@ -38,21 +37,18 @@ public class EmailNotifier implements Observer {
 
         String to = user.getEmail();
 
-        // لا تبعت لو الايميل null أو "null" أو فاضي
         if (to == null || to.trim().isEmpty() || "null".equalsIgnoreCase(to.trim())) {
             System.out.println("EmailNotifier: user " + user.getUserName() +
                     " has no valid email, skipping.");
             return;
         }
 
-        // تأكد إن بيانات الإرسال موجودة
         if (senderEmail == null || appPassword == null) {
             System.out.println("EmailNotifier: EMAIL_USERNAME or EMAIL_PASSWORD not set in .env");
             return;
         }
 
         try {
-            // 1) إعدادات SMTP (Gmail)
             Properties props = new Properties();
             props.put("mail.smtp.auth", "true");
             props.put("mail.smtp.starttls.enable", "true");
@@ -60,7 +56,6 @@ public class EmailNotifier implements Observer {
             props.put("mail.smtp.port", "587");
             props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
 
-            // 2) جلسة مع أوثنتيكاشن
             Session session = Session.getInstance(props, new Authenticator() {
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
@@ -68,14 +63,12 @@ public class EmailNotifier implements Observer {
                 }
             });
 
-            // 3) بناء الرسالة
             Message msg = new MimeMessage(session);
             msg.setFrom(new InternetAddress(senderEmail));
             msg.setRecipient(Message.RecipientType.TO, new InternetAddress(to));
             msg.setSubject("Library Overdue Notice");
             msg.setText(message);
 
-            // 4) إرسال
             Transport.send(msg);
 
             System.out.println("Email SENT to: " + to);

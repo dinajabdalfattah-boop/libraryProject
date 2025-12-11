@@ -47,7 +47,6 @@ public class User {
             throw new IllegalArgumentException("loan is null");
         }
 
-        // 🔴 MESSAGE MUST MATCH TEST EXACTLY
         if (fineBalance > 0) {
             throw new IllegalStateException("Cannot borrow: Unpaid fines.");
         }
@@ -68,7 +67,6 @@ public class User {
             throw new IllegalArgumentException("loan is null");
         }
 
-        // 🔴 MESSAGE MUST MATCH TEST EXACTLY
         if (fineBalance > 0) {
             throw new IllegalStateException("Cannot borrow: Unpaid fines.");
         }

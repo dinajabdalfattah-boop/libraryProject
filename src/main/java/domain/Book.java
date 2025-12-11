@@ -10,7 +10,6 @@ import java.time.temporal.ChronoUnit;
  */
 public class Book {
 
-
     private final String title;
     private final String author;
     private final String isbn;
@@ -75,8 +74,6 @@ public class Book {
         this.borrowDate = null;
         this.dueDate = null;
     }
-
-    // ---------- Overdue helpers ----------
 
     /**
      * Checks whether the book is overdue as of the given date.

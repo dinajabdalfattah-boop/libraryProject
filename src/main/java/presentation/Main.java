@@ -2,7 +2,6 @@ package presentation;
 
 import domain.Book;
 import domain.CD;
-import domain.CDLoan;
 import domain.Loan;
 import domain.User;
 import service.*;
@@ -13,14 +12,13 @@ import java.util.Scanner;
 public class Main {
 
     private static final Scanner input = new Scanner(System.in);
-    private static final String RED = "\u001B[31m";
-    private static final String GREEN = "\u001B[32m";
-    private static final String CYAN = "\u001B[36m";
-    private static final String YELLOW = "\u001B[33m";
-    private static final String RESET = "\u001B[0m";
 
     private static final String ENTER_CHOICE = "Enter choice: ";
-    private static final String INVALID_MSG = RED + "Invalid." + RESET;
+    private static final String INVALID_MSG = "Invalid.";
+
+    private static final String PROMPT_BOOK_ISBN = "Book ISBN: ";
+    private static final String PROMPT_CD_ID = "CD ID: ";
+    private static final String PROMPT_SEARCH_TEXT = "Enter search text: ";
 
     public static void main(String[] args) {
 
@@ -39,7 +37,7 @@ public class Main {
         cdLoanService.loadCDLoansFromFile(cdService.getAllCDs());
         adminService.loadAdminsFromFile();
 
-        System.out.println(GREEN + "\nLoaded all data from files successfully.\n" + RESET);
+        System.out.println("\nLoaded all data from files successfully.\n");
 
         LibraryService library = new LibraryService(
                 userService, bookService, loanService, cdLoanService, reminderService
@@ -48,10 +46,6 @@ public class Main {
         mainMenu(adminService, library, bookService, cdService, userService);
     }
 
-    // =====================================================================
-    // MAIN MENU
-    // =====================================================================
-
     private static void mainMenu(AdminService adminService,
                                  LibraryService library,
                                  BookService bookService,
@@ -59,27 +53,23 @@ public class Main {
                                  UserService userService) {
 
         while (true) {
-            System.out.println(CYAN + "\n===== WELCOME TO LIBRARY SYSTEM =====" + RESET);
+            System.out.println("\n===== WELCOME TO LIBRARY SYSTEM =====");
             System.out.println("1) Login");
             System.out.println("2) Exit");
-            System.out.print(YELLOW + ENTER_CHOICE + RESET);
+            System.out.print(ENTER_CHOICE);
 
             int choice = getInt();
 
             switch (choice) {
                 case 1 -> loginRoleMenu(adminService, library, bookService, cdService, userService);
                 case 2 -> {
-                    System.out.println(GREEN + "Goodbye!" + RESET);
+                    System.out.println("Goodbye!");
                     return;
                 }
                 default -> System.out.println(INVALID_MSG);
             }
         }
     }
-
-    // =====================================================================
-    // LOGIN ROLE MENU
-    // =====================================================================
 
     private static void loginRoleMenu(AdminService adminService,
                                       LibraryService library,
@@ -88,12 +78,12 @@ public class Main {
                                       UserService userService) {
 
         while (true) {
-            System.out.println(CYAN + "\n----- LOGIN MENU -----" + RESET);
+            System.out.println("\n----- LOGIN MENU -----");
             System.out.println("1) Login as Admin");
             System.out.println("2) Login as User");
             System.out.println("3) Login as Librarian");
             System.out.println("4) Back");
-            System.out.print(YELLOW + ENTER_CHOICE + RESET);
+            System.out.print(ENTER_CHOICE);
 
             int c = getInt();
 
@@ -106,10 +96,6 @@ public class Main {
             }
         }
     }
-
-    // =====================================================================
-    // ADMIN MENU
-    // =====================================================================
 
     private static void adminLoginFlow(AdminService adminService,
                                        LibraryService library,
@@ -124,18 +110,18 @@ public class Main {
         String password = input.nextLine();
 
         if (!adminService.login(userName, password)) {
-            System.out.println(RED + "Invalid admin credentials." + RESET);
+            System.out.println("Invalid admin credentials.");
             return;
         }
 
         while (true) {
-            System.out.println(CYAN + "\n----- ADMIN MENU -----" + RESET);
+            System.out.println("\n----- ADMIN MENU -----");
             System.out.println("1) Add Book");
             System.out.println("2) Add CD");
             System.out.println("3) Unregister User");
             System.out.println("4) Send Reminders");
             System.out.println("5) Logout");
-            System.out.print(YELLOW + ENTER_CHOICE + RESET);
+            System.out.print(ENTER_CHOICE);
 
             int c = getInt();
             switch (c) {
@@ -144,7 +130,7 @@ public class Main {
                 case 3 -> adminUnregisterUser(userService);
                 case 4 -> {
                     library.sendOverdueReminders();
-                    System.out.println(GREEN + "Reminders sent." + RESET);
+                    System.out.println("Reminders sent.");
                 }
                 case 5 -> {
                     adminService.logout();
@@ -155,10 +141,6 @@ public class Main {
         }
     }
 
-    // =====================================================================
-    // ADMIN ACTIONS (ADDED)
-    // =====================================================================
-
     private static void adminAddBook(BookService bookService) {
         System.out.print("Book title: ");
         String title = input.nextLine();
@@ -166,13 +148,13 @@ public class Main {
         System.out.print("Book author: ");
         String author = input.nextLine();
 
-        System.out.print("Book ISBN: ");
+        System.out.print(PROMPT_BOOK_ISBN);
         String isbn = input.nextLine();
 
         if (bookService.addBook(title, author, isbn))
-            System.out.println(GREEN + "Book added successfully." + RESET);
+            System.out.println("Book added successfully.");
         else
-            System.out.println(RED + "Cannot add: ISBN already exists." + RESET);
+            System.out.println("Cannot add: ISBN already exists.");
     }
 
     private static void adminAddCD(CDService cdService) {
@@ -182,13 +164,13 @@ public class Main {
         System.out.print("CD artist: ");
         String artist = input.nextLine();
 
-        System.out.print("CD ID: ");
+        System.out.print(PROMPT_CD_ID);
         String id = input.nextLine();
 
         if (cdService.addCD(title, artist, id))
-            System.out.println(GREEN + "CD added successfully." + RESET);
+            System.out.println("CD added successfully.");
         else
-            System.out.println(RED + "Cannot add: CD ID already exists." + RESET);
+            System.out.println("Cannot add: CD ID already exists.");
     }
 
     private static void adminUnregisterUser(UserService userService) {
@@ -197,46 +179,42 @@ public class Main {
 
         User user = userService.findUserByName(name);
         if (user == null) {
-            System.out.println(RED + "User not found." + RESET);
+            System.out.println("User not found.");
             return;
         }
 
         boolean removed = userService.unregisterUser(user);
         if (removed)
-            System.out.println(GREEN + "User unregistered." + RESET);
+            System.out.println("User unregistered.");
         else
-            System.out.println(RED + "Cannot unregister: user has active loans or unpaid fines." + RESET);
+            System.out.println("Cannot unregister: user has active loans or unpaid fines.");
     }
-
-    // =====================================================================
-    // LIBRARIAN MENU  (US2.2)
-    // =====================================================================
 
     private static void librarianMenu(LibraryService library) {
 
         while (true) {
-            System.out.println(CYAN + "\n----- LIBRARIAN MENU -----" + RESET);
+            System.out.println("\n----- LIBRARIAN MENU -----");
             System.out.println("1) View overdue book loans (>28 days)");
             System.out.println("2) Back");
-            System.out.print(YELLOW + ENTER_CHOICE + RESET);
+            System.out.print(ENTER_CHOICE);
 
             int c = getInt();
 
             switch (c) {
                 case 1 -> {
                     List<Loan> overdue = library.getOverdueLoans();
-                    System.out.println(CYAN + "\n--- OVERDUE BOOKS REPORT ---" + RESET);
+                    System.out.println("\n--- OVERDUE BOOKS REPORT ---");
 
                     if (overdue.isEmpty()) {
-                        System.out.println(GREEN + "No overdue books." + RESET);
+                        System.out.println("No overdue books.");
                     } else {
                         for (Loan l : overdue) {
-                            System.out.println(YELLOW
-                                    + "User: " + l.getUser().getUserName()
-                                    + " | Book: " + l.getBook().getTitle()
-                                    + " | Due: " + l.getDueDate()
-                                    + " | Overdue days: " + l.getOverdueDays()
-                                    + RESET);
+                            System.out.println(
+                                    "User: " + l.getUser().getUserName()
+                                            + " | Book: " + l.getBook().getTitle()
+                                            + " | Due: " + l.getDueDate()
+                                            + " | Overdue days: " + l.getOverdueDays()
+                            );
                         }
                     }
                 }
@@ -245,10 +223,6 @@ public class Main {
             }
         }
     }
-
-    // =====================================================================
-    // USER MENU
-    // =====================================================================
 
     private static void userLoginFlow(UserService userService,
                                       LibraryService library,
@@ -260,12 +234,12 @@ public class Main {
 
         User user = userService.findUserByName(name);
         if (user == null) {
-            System.out.println(RED + "User not found." + RESET);
+            System.out.println("User not found.");
             return;
         }
 
         while (true) {
-            System.out.println(CYAN + "\n----- USER MENU (" + user.getUserName() + ") -----" + RESET);
+            System.out.println("\n----- USER MENU (" + user.getUserName() + ") -----");
             System.out.println("1) Search books");
             System.out.println("2) Search CDs");
             System.out.println("3) Borrow book");
@@ -275,7 +249,7 @@ public class Main {
             System.out.println("7) View status");
             System.out.println("8) Pay fine");
             System.out.println("9) Logout");
-            System.out.print(YELLOW + ENTER_CHOICE + RESET);
+            System.out.print(ENTER_CHOICE);
 
             int c = getInt();
 
@@ -294,56 +268,52 @@ public class Main {
         }
     }
 
-    // =====================================================================
-    // USER ACTIONS
-    // =====================================================================
-
     private static void userSearchBooks(BookService bookService) {
-        System.out.print("Enter search text: ");
+        System.out.print(PROMPT_SEARCH_TEXT);
         for (Book b : bookService.search(input.nextLine())) {
             System.out.println(b);
         }
     }
 
     private static void userSearchCDs(CDService cdService) {
-        System.out.print("Enter search text: ");
+        System.out.print(PROMPT_SEARCH_TEXT);
         for (CD c : cdService.search(input.nextLine())) {
             System.out.println(c);
         }
     }
 
     private static void userBorrowBook(User user, LibraryService library, BookService bookService) {
-        System.out.print("Book ISBN: ");
+        System.out.print(PROMPT_BOOK_ISBN);
         Book book = bookService.findBookByISBN(input.nextLine());
         if (book != null && library.borrowBook(user, book))
-            System.out.println(GREEN + "Book borrowed." + RESET);
+            System.out.println("Book borrowed.");
         else
-            System.out.println(RED + "Borrow failed." + RESET);
+            System.out.println("Borrow failed.");
     }
 
     private static void userBorrowCD(User user, LibraryService library, CDService cdService) {
-        System.out.print("CD ID: ");
+        System.out.print(PROMPT_CD_ID);
         CD cd = cdService.findCDById(input.nextLine());
         if (cd != null && library.borrowCD(user, cd))
-            System.out.println(GREEN + "CD borrowed." + RESET);
+            System.out.println("CD borrowed.");
         else
-            System.out.println(RED + "Borrow failed." + RESET);
+            System.out.println("Borrow failed.");
     }
 
     private static void userReturnBook(User user, LibraryService library, BookService bookService) {
-        System.out.print("Book ISBN: ");
+        System.out.print(PROMPT_BOOK_ISBN);
         Book book = bookService.findBookByISBN(input.nextLine());
         System.out.println(library.returnBook(user, book)
-                ? GREEN + "Returned." + RESET
-                : RED + "Return failed." + RESET);
+                ? "Returned."
+                : "Return failed.");
     }
 
     private static void userReturnCD(User user, LibraryService library, CDService cdService) {
-        System.out.print("CD ID: ");
+        System.out.print(PROMPT_CD_ID);
         CD cd = cdService.findCDById(input.nextLine());
         System.out.println(library.returnCD(user, cd)
-                ? GREEN + "Returned." + RESET
-                : RED + "Return failed." + RESET);
+                ? "Returned."
+                : "Return failed.");
     }
 
     private static void userViewStatus(User user) {
@@ -355,10 +325,6 @@ public class Main {
         user.payFine(Double.parseDouble(input.nextLine()));
         userService.saveUsers();
     }
-
-    // =====================================================================
-    // INPUT UTILITY
-    // =====================================================================
 
     private static int getInt() {
         while (true) {

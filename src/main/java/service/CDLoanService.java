@@ -20,11 +20,32 @@ public class CDLoanService {
     private final UserService userService;
     private static final String LOANS_FILE = "src/main/resources/data/cdloans.txt";
 
+    /**
+     * Constructs a CDLoanService with required service dependencies.
+     *
+     * @param bookService service used to manage book-related data (dependency)
+     * @param userService service used to manage user-related data (dependency)
+     */
     public CDLoanService(BookService bookService, UserService userService) {
         this.bookService = bookService;
         this.userService = userService;
     }
 
+    /**
+     * Creates a new CD loan for a given user and CD if borrowing rules allow it.
+     * A loan is rejected if:
+     * - user or CD is null
+     * - user has unpaid fines
+     * - user has overdue items
+     * - CD is not available
+     *
+     * If successful, the loan is stored in memory, linked to the user,
+     * and persisted to the file.
+     *
+     * @param user the user borrowing the CD
+     * @param cd the CD being borrowed
+     * @return true if the loan was created successfully, false otherwise
+     */
     public boolean createCDLoan(User user, CD cd) {
 
         if (user == null || cd == null) {
@@ -41,10 +62,19 @@ public class CDLoanService {
         user.addCDLoan(loan);
         cdLoans.add(loan);
 
-        saveAllLoansToFile();   // 🔥 فقط هذا التعديل
+        saveAllLoansToFile();
         return true;
     }
 
+    /**
+     * Returns a borrowed CD for a specific user.
+     * If a matching active loan is found, the loan is closed, the CD is returned,
+     * the user loan list is updated, and the updated loans are persisted.
+     *
+     * @param user the user returning the CD
+     * @param cd the CD being returned
+     * @return true if the return operation succeeds, false otherwise
+     */
     public boolean returnCDLoan(User user, CD cd) {
 
         if (user == null || cd == null) {
@@ -69,7 +99,7 @@ public class CDLoanService {
                 loan.returnCD();
                 user.returnCDLoan(loan);
 
-                saveAllLoansToFile();   // 🔥 فقط هذا التعديل
+                saveAllLoansToFile();
                 return true;
             }
         }
@@ -153,6 +183,11 @@ public class CDLoanService {
         }
     }
 
+    /**
+     * Returns a list of all CD loans that are currently overdue.
+     *
+     * @return a list containing overdue CD loans
+     */
     public List<CDLoan> getOverdueCDLoans() {
         List<CDLoan> result = new ArrayList<>();
 
@@ -164,6 +199,11 @@ public class CDLoanService {
         return result;
     }
 
+    /**
+     * Returns all CD loans currently stored in memory.
+     *
+     * @return list of all CD loans
+     */
     public List<CDLoan> getAllCDLoans() {
         return cdLoans;
     }

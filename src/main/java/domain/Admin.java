@@ -1,12 +1,11 @@
 package domain;
 
 /**
- * This class represents an Admin user in the Library Management System.
- * The admin is responsible for performing system-level operations,
- * and this class mainly handles authentication and basic admin details.
+ * Represents an administrator in the Library Management System.
+ * This class stores admin credentials and manages authentication
+ * such as login and logout operations.
  */
 public class Admin {
-
 
     private String userName;
     private final int adminId;
@@ -14,11 +13,11 @@ public class Admin {
     private boolean loggedIn = false;
 
     /**
-     * Creates a new Admin object with the given username, ID, and password.
+     * Constructs a new Admin with the specified username, ID, and password.
      *
-     * @param userName the admin's username
-     * @param adminId the unique ID of the admin
-     * @param password the admin's password
+     * @param userName the administrator username
+     * @param adminId the unique identifier of the administrator
+     * @param password the administrator password
      */
     public Admin(String userName, int adminId, String password) {
         this.userName = userName;
@@ -26,15 +25,13 @@ public class Admin {
         this.password = password;
     }
 
-    // -------- Authentication --------
-
     /**
-     * Tries to log the admin into the system by checking the given credentials.
+     * Authenticates the administrator using the provided credentials.
+     * If the username and password are correct, the admin is logged in.
      *
-     * @param userName the username entered by the user
-     * @param password the password entered by the user
-     * @return true if both the username and password match the stored values,
-     *         otherwise false
+     * @param userName the entered username
+     * @param password the entered password
+     * @return true if authentication succeeds, false otherwise
      */
     public boolean login(String userName, String password) {
         if (this.userName.equals(userName) && this.password.equals(password)) {
@@ -45,67 +42,70 @@ public class Admin {
     }
 
     /**
-     * Logs the admin out of the system by resetting the login state.
+     * Logs the administrator out of the system.
      */
     public void logout() {
         this.loggedIn = false;
     }
 
     /**
-     * Checks whether the admin is currently logged in.
+     * Checks whether the administrator is currently logged in.
      *
-     * @return true if the admin is logged in, otherwise false
+     * @return true if the admin is logged in, false otherwise
      */
     public boolean isLoggedIn() {
         return loggedIn;
     }
 
     /**
-     * @return the admin's username
+     * Returns the administrator username.
+     *
+     * @return the admin username
      */
     public String getUserName() {
         return userName;
     }
 
     /**
-     * @return the unique ID of the admin
+     * Returns the administrator ID.
+     *
+     * @return the unique admin ID
      */
     public int getAdminId() {
         return adminId;
     }
 
     /**
-     * @return the admin's password
+     * Returns the administrator password.
+     *
+     * @return the admin password
      */
     public String getPassword() {
         return password;
     }
 
-    // -------- Setters --------
-
     /**
-     * Updates the admin's username.
+     * Updates the administrator username.
      *
-     * @param userName the new username to be set
+     * @param userName the new username
      */
     public void setUserName(String userName) {
         this.userName = userName;
     }
 
     /**
-     * Updates the admin's password.
+     * Updates the administrator password.
      *
-     * @param password the new password to be set
+     * @param password the new password
      */
     public void setPassword(String password) {
         this.password = password;
     }
 
     /**
-     * Returns a readable string that represents the admin object,
-     * mostly for debugging and display purposes.
+     * Returns a string representation of the admin object.
      *
-     * @return a string showing the admin's information
+     * @return a formatted string containing admin details
      */
     @Override
     public String toString() {

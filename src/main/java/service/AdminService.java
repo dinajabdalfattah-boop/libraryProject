@@ -33,7 +33,7 @@ public class AdminService {
         }
 
         admins.add(new Admin(userName, adminId, password));
-        saveAdminsToFile();     // 🔥 حفظ تلقائي
+        saveAdminsToFile();
         return true;
     }
 
@@ -43,7 +43,7 @@ public class AdminService {
     public boolean login(String userName, String password) {
 
         if (loggedInAdmin != null) {
-            return false; // someone already logged in
+            return false;
         }
 
         for (Admin a : admins) {
@@ -87,15 +87,11 @@ public class AdminService {
         return admins;
     }
 
-    // ---------------------------------------------------
-    //  FILE OPERATIONS
-    // ---------------------------------------------------
-
     /**
      * Saves all admins to file.
      * Format: userName,adminId,password
      */
-    public void saveAdminsToFile() {   // 🔥 public الآن
+    public void saveAdminsToFile() {
         List<String> lines = new ArrayList<>();
 
         for (Admin a : admins) {
@@ -133,7 +129,7 @@ public class AdminService {
             try {
                 adminId = Integer.parseInt(idStr);
             } catch (NumberFormatException e) {
-                continue; // skip malformed line
+                continue;
             }
 
             admins.add(new Admin(userName, adminId, password));

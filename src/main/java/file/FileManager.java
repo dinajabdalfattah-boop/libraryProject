@@ -27,7 +27,7 @@ public class FileManager {
             if (!f.exists()) {
                 f.getParentFile().mkdirs();
                 f.createNewFile();
-                return new ArrayList<>();  // لو الملف جديد يرجّع list فاضية
+                return new ArrayList<>();
             }
             return Files.readAllLines(Paths.get(filePath));
 

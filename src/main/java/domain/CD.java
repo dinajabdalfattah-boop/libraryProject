@@ -39,29 +39,39 @@ public class CD {
         this.dueDate = date.plusDays(7);
     }
 
-    /** Borrows the CD today. */
+    /**
+     * Borrows the CD today.
+     */
     public void borrowCD() {
         borrowCD(LocalDate.now());
     }
 
-    /** Returns the CD and clears borrowing information. */
+    /**
+     * Returns the CD and clears borrowing information.
+     */
     public void returnCD() {
         this.available = true;
         this.borrowDate = null;
         this.dueDate = null;
     }
 
-    /** Checks if overdue based on a specific date. */
+    /**
+     * Checks if overdue based on a specific date.
+     */
     public boolean isOverdue(LocalDate currentDate) {
         return dueDate != null && currentDate.isAfter(dueDate);
     }
 
-    /** Checks if overdue today. */
+    /**
+     * Checks if overdue today.
+     */
     public boolean isOverdue() {
         return isOverdue(LocalDate.now());
     }
 
-    /** Calculates remaining days (negative if overdue). */
+    /**
+     * Calculates remaining days (negative if overdue).
+     */
     public int getRemainingDays(LocalDate today) {
         if (dueDate == null) return 0;
         return (int) ChronoUnit.DAYS.between(today, dueDate);
@@ -91,17 +101,23 @@ public class CD {
         return id;
     }
 
-    /** Restores the borrow date when loading from a file. */
+    /**
+     * Restores the borrow date when loading from a file.
+     */
     public void setBorrowDate(LocalDate borrowDate) {
         this.borrowDate = borrowDate;
     }
 
-    /** Restores the due date when loading from a file. */
+    /**
+     * Restores the due date when loading from a file.
+     */
     public void setDueDate(LocalDate dueDate) {
         this.dueDate = dueDate;
     }
 
-    /** String representation for debugging. */
+    /**
+     * String representation for debugging.
+     */
     @Override
     public String toString() {
         return String.format(

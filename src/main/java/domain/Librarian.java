@@ -38,8 +38,6 @@ public class Librarian {
         this.password = password;
     }
 
-    // -------------------- Authentication --------------------
-
     /**
      * Attempts to log the librarian in using the provided credentials.
      *
@@ -69,8 +67,6 @@ public class Librarian {
         return loggedIn;
     }
 
-    // -------------------- Getters --------------------
-
     /**
      * @return the librarian's unique ID
      */
@@ -94,8 +90,6 @@ public class Librarian {
     public String getPassword() {
         return password;
     }
-
-    // -------------------- Setters --------------------
 
     /**
      * Updates the librarian's password.

@@ -37,7 +37,6 @@ public class Loan {
         this.borrowDate = LocalDate.now();
         this.dueDate = borrowDate.plusDays(28);
 
-        // Mark the book as borrowed in the book object
         book.borrowBook(borrowDate);
     }
 
@@ -141,19 +140,29 @@ public class Loan {
     }
 
     /** @return the user who borrowed the book */
-    public User getUser() { return user; }
+    public User getUser() {
+        return user;
+    }
 
     /** @return the book being loaned */
-    public Book getBook() { return book; }
+    public Book getBook() {
+        return book;
+    }
 
     /** @return the borrow date of the loan */
-    public LocalDate getBorrowDate() { return borrowDate; }
+    public LocalDate getBorrowDate() {
+        return borrowDate;
+    }
 
     /** @return the due date for the loan */
-    public LocalDate getDueDate() { return dueDate; }
+    public LocalDate getDueDate() {
+        return dueDate;
+    }
 
     /** @return the fine strategy applied to this loan */
-    public FineStrategy getFineStrategy() { return fineStrategy; }
+    public FineStrategy getFineStrategy() {
+        return fineStrategy;
+    }
 
     /**
      * Returns a readable description of the loan.

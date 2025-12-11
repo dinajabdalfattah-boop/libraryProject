@@ -56,7 +56,7 @@ public class ReminderService {
      * @param overdueBookLoans list of overdue book loans
      * @param overdueCDLoans   list of overdue CD loans
      */
-    public void sendReminders(List<Loan> overdueBookLoans,List<CDLoan> overdueCDLoans) {
+    public void sendReminders(List<Loan> overdueBookLoans, List<CDLoan> overdueCDLoans) {
 
         Map<User, Integer> overdueCountMap = new HashMap<>();
 
