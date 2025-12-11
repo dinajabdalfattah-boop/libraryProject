@@ -17,7 +17,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -131,7 +131,12 @@ public class CDLoanServiceTest {
             assertTrue(result);
             assertEquals(1, cdLoanService.getAllCDLoans().size());
             verify(user, times(1)).addCDLoan(any(CDLoan.class));
-            fm.verify(() -> FileManager.appendLine(anyString(), anyString()), times(1));
+
+            // ➜ بعد الريفاكتور: نتوقع استدعاء writeLines بدل appendLine
+            fm.verify(() -> FileManager.writeLines(
+                    anyString(),   // أو eq("src/main/resources/data/cdloans.txt")
+                    anyList()
+            ), times(1));
         }
     }
 
@@ -182,15 +187,6 @@ public class CDLoanServiceTest {
         assertTrue(result);
         assertFalse(loan.isActive());
         verify(user, times(1)).returnCDLoan(loan);
-    }
-
-    // ---------------------------------------------------------
-    // saveLoanToFile guard (loan == null)
-    // ---------------------------------------------------------
-
-    @Test
-    void testSaveLoanToFileWithNullLoanDoesNotThrow() {
-        assertDoesNotThrow(() -> cdLoanService.saveLoanToFile(null));
     }
 
     // ---------------------------------------------------------

@@ -1,5 +1,5 @@
-sama,sama_22@hotmail.com,5.0
+sama,sama_22@hotmail.com,0.0
 murad,murad.work@live.com,0.0
-leen,leen123@yahoo.com,12.5
+leen,leen123@yahoo.com,0.0
 hadi,hadi.dev@gmail.com,0.0
 aesha,s12217274@stu.najah.edu,12.5

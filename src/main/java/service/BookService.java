@@ -6,23 +6,11 @@ import file.FileManager;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Service responsible for managing all book-related operations:
- *  - Add books
- *  - Load books from file
- *  - Save books to file
- *  - Search books
- *  - Find book by ISBN
- */
 public class BookService {
 
     private final List<Book> books = new ArrayList<>();
     private static final String BOOKS_FILE = "src/main/resources/data/books.txt";
 
-    /**
-     * Adds a new book if ISBN does not already exist.
-     * Automatically saves the updated book list to file.
-     */
     public boolean addBook(String title, String author, String isbn) {
 
         if (findBookByISBN(isbn) != null)
@@ -31,14 +19,10 @@ public class BookService {
         Book book = new Book(title, author, isbn);
         books.add(book);
 
-        saveBooksToFile();   // 🔥 حفظ تلقائي
+        saveBooksToFile();
         return true;
     }
 
-    /**
-     * Saves all books to the file in this format:
-     * title,author,isbn,isAvailable,borrowDate,dueDate
-     */
     public void saveBooksToFile() {
 
         List<String> lines = new ArrayList<>();
@@ -58,11 +42,6 @@ public class BookService {
         FileManager.writeLines(BOOKS_FILE, lines);
     }
 
-    /**
-     * Loads books from the file, ignores invalid lines.
-     * Books are initially loaded as AVAILABLE, then LoanService
-     * will update active borrowed books when loading loans.
-     */
     public void loadBooksFromFile() {
 
         books.clear();
@@ -82,7 +61,6 @@ public class BookService {
 
             Book b = new Book(p[0], p[1], p[2]);
 
-            // Always reset state — LoanService fixes borrowed ones later
             b.setAvailable(true);
             b.setBorrowDate(null);
             b.setDueDate(null);
@@ -92,27 +70,37 @@ public class BookService {
     }
 
     /**
-     * Returns list of books that match keyword in:
-     *  - title
-     *  - author
-     *  - ISBN
+     * search() — EXACT for author & ISBN, PARTIAL for title
      */
     public List<Book> search(String keyword) {
 
         if (keyword == null)
             throw new NullPointerException("keyword is null");
 
-        if (keyword.trim().isEmpty())
+        keyword = keyword.trim();
+        if (keyword.isEmpty())
             return new ArrayList<>(books);
 
-        keyword = keyword.toLowerCase();
+        String keyLower = keyword.toLowerCase();
+
         List<Book> results = new ArrayList<>();
 
         for (Book b : books) {
-            if (b.getTitle().toLowerCase().contains(keyword) ||
-                    b.getAuthor().toLowerCase().contains(keyword) ||
-                    b.getIsbn().toLowerCase().contains(keyword)) {
 
+            // title → partial match
+            if (b.getTitle().toLowerCase().contains(keyLower)) {
+                results.add(b);
+                continue;
+            }
+
+            // author → exact only
+            if (b.getAuthor().equalsIgnoreCase(keyword)) {
+                results.add(b);
+                continue;
+            }
+
+            // ISBN → exact only
+            if (b.getIsbn().equals(keyword)) {
                 results.add(b);
             }
         }
@@ -120,9 +108,6 @@ public class BookService {
         return results;
     }
 
-    /**
-     * Search for a book using ISBN.
-     */
     public Book findBookByISBN(String isbn) {
         for (Book b : books) {
             if (b.getIsbn().equals(isbn))
@@ -131,9 +116,6 @@ public class BookService {
         return null;
     }
 
-    /**
-     * Returns all currently loaded books.
-     */
     public List<Book> getAllBooks() {
         return books;
     }
