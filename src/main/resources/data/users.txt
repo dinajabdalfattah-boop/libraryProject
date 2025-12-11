@@ -1,1 +1,5 @@
-Ahmad,a@a.com,0.0
+Ali,ali@example.com,0.0
+Sara,sara@example.com,0.0
+Omar,omar@example.com,10.0
+Lina,null,0.0
+TestUser,test@example.com,0.0

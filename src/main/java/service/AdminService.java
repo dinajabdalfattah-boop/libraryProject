@@ -1,26 +1,33 @@
 package service;
 
 import domain.Admin;
+import file.FileManager;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * This service class manages all administrator-related operations in the system.
- * It supports registering new admins, logging in, logging out, and checking
- * who is currently logged in. Only one administrator can be logged in at any time.
+ * It supports:
+ *  - registering new admins
+ *  - loading/saving admins from/to a file
+ *  - logging in / out
+ *  - checking who is currently logged in
  *
- * Features implemented according to:
- * - US1.1: Admin login
- * - US1.2: Admin logout
+ * File format (admins.txt):
+ *   userName,adminId,password
  */
 public class AdminService {
 
     private final List<Admin> admins = new ArrayList<>();
     private Admin loggedInAdmin = null;
 
+    private static final String ADMINS_FILE = "src/main/resources/data/admins.txt";
+
     /**
      * Registers a new administrator in the system.
      * The admin is only added if both the username and admin ID are unique.
+     * On success the updated list is saved to the file.
      *
      * @param userName the username for the new admin
      * @param adminId  a unique numerical identifier for the admin
@@ -37,6 +44,7 @@ public class AdminService {
         }
 
         admins.add(new Admin(userName, adminId, password));
+        saveAdminsToFile();
         return true;
     }
 
@@ -99,5 +107,67 @@ public class AdminService {
      */
     public List<Admin> getAllAdmins() {
         return admins;
+    }
+
+    // -------------------- File persistence --------------------
+
+    /**
+     * Saves all admins to the admins.txt file.
+     * Format of each line:
+     *   userName,adminId,password
+     */
+    private void saveAdminsToFile() {
+        List<String> lines = new ArrayList<>();
+
+        for (Admin a : admins) {
+            String line = a.getUserName() + "," +
+                    a.getAdminId() + "," +
+                    a.getPassword();
+            lines.add(line);
+        }
+
+        FileManager.writeLines(ADMINS_FILE, lines);
+    }
+
+    /**
+     * Loads admins from the admins.txt file.
+     * This method is defensive:
+     *  - ignores null/blank lines
+     *  - ignores malformed lines (missing fields)
+     *  - ignores lines with non-numeric IDs
+     */
+    public void loadAdminsFromFile() {
+        admins.clear();
+
+        List<String> lines = FileManager.readLines(ADMINS_FILE);
+        if (lines == null) {
+            return;
+        }
+
+        for (String line : lines) {
+            if (line == null || line.isBlank()) {
+                continue;
+            }
+
+            String[] p = line.split(",");
+            if (p.length < 3) {
+                continue;
+            }
+
+            String userName = p[0];
+            String idStr = p[1];
+            String password = p[2];
+
+            int adminId;
+            try {
+                adminId = Integer.parseInt(idStr);
+            } catch (NumberFormatException e) {
+                // invalid id, skip this line
+                continue;
+            }
+
+            Admin admin = new Admin(userName, adminId, password);
+            admins.add(admin);
+        }
     }
 }

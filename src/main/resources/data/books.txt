@@ -1,1 +1,6 @@
-T1,A1,111,true,null,null
+Clean Code,Robert C. Martin,9780132350884,false,2025-12-11,2026-01-08
+Design Patterns,Erich Gamma,9780201633610,false,2025-12-11,2026-01-08
+Refactoring,Martin Fowler,9780201485677,true,null,null
+Effective Java,Joshua Bloch,9780134685991,true,null,null
+Algorithms,Robert Sedgewick,9780321573513,false,2025-12-11,2026-01-08
+New Book,Some Author,ISBN-100,true,null,null

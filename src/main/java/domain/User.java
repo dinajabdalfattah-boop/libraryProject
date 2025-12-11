@@ -11,7 +11,6 @@ import java.util.List;
  */
 public class User {
 
-
     private final String name;
     private String email;
     private double fineBalance;
@@ -73,38 +72,35 @@ public class User {
 
     /**
      * Adds a new loan for a borrowed book.
-     * Borrowing is only allowed if the user does NOT have unpaid fines
-     * and does NOT have any overdue items.
+     *
+     * NOTE:
+     *  - Business rules (fines / overdue checks) are enforced in the services
+     *    (LoanService / LibraryService), not here.
+     *  - This method simply registers the loan in the user's active list.
      *
      * @param loan the Loan object representing the borrowed book
-     * @throws IllegalStateException if the user has unpaid fines or overdue loans
      */
     public void addLoan(Loan loan) {
-        
-        if (fineBalance > 0)
-            throw new IllegalStateException("Cannot borrow: Unpaid fines.");
-
-        if (hasOverdueLoans())
-            throw new IllegalStateException("Cannot borrow: Overdue loans exist.");
-
+        if (loan == null) {
+            return;
+        }
         activeBookLoans.add(loan);
     }
 
     /**
      * Adds a new loan for a borrowed CD.
-     * Same borrowing restrictions as books apply.
+     *
+     * NOTE:
+     *  - Business rules (fines / overdue checks) are enforced in the services
+     *    (CDLoanService / LibraryService), not here.
+     *  - This method simply registers the loan in the user's active list.
      *
      * @param loan the CDLoan object
-     * @throws IllegalStateException if the user has unpaid fines or overdue CDs/books
      */
     public void addCDLoan(CDLoan loan) {
-
-        if (fineBalance > 0)
-            throw new IllegalStateException("Cannot borrow: Unpaid fines.");
-
-        if (hasOverdueLoans())
-            throw new IllegalStateException("Cannot borrow: Overdue loans exist.");
-
+        if (loan == null) {
+            return;
+        }
         activeCDLoans.add(loan);
     }
 
@@ -116,8 +112,7 @@ public class User {
      */
     public void returnLoan(Loan loan) {
         if (activeBookLoans.remove(loan)) {
-            loan.returnBook(); 
-            loan.returnBook(); 
+            loan.returnBook();
         }
     }
 

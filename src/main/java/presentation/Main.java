@@ -1,28 +1,28 @@
 package presentation;
 
-import domain.*;
+import domain.Book;
+import domain.CDLoan;
+import domain.Loan;
+import domain.User;
 import service.*;
+import notification.EmailNotifier;   // 👈 جديد
 
 import java.util.List;
 import java.util.Scanner;
-import java.util.logging.Logger;
 
 /**
- * The main entry point of the Library Management System.
+ * Console entry point for the Library Management System.
  *
- * This class provides a console-based UI for interacting with the system.
- * It allows the user to:
- * - manage users
- * - manage books
- * - borrow and return items
- * - view overdue items
- * - send reminder notifications
- *
- * It creates and initializes all service classes, loads data from files,
- * and then enters a main menu loop that handles user commands.
+ * Flow:
+ *  - Show welcome screen with: Login / Exit
+ *  - Login as: Admin / User / Librarian (only Admin fully implemented)
+ *  - Admin menu supports:
+ *      * Add book
+ *      * Add CD
+ *      * Unregister user
+ *      * Send reminders
  */
 public class Main {
-    private static final String ENTER_CHOICE = "Enter choice: ";
 
     private static final Scanner input = new Scanner(System.in);
     private static final String RED = "\u001B[31m";
@@ -31,300 +31,266 @@ public class Main {
     private static final String YELLOW = "\u001B[33m";
     private static final String RESET = "\u001B[0m";
 
-    // 🔁 Avoid duplicating "Invalid."
+    private static final String ENTER_CHOICE = "Enter choice: ";
     private static final String INVALID = "Invalid.";
     private static final String INVALID_MSG = RED + INVALID + RESET;
 
-    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
-
     /**
      * Program entry point.
-     * Creates all services, loads saved data from files, and starts the main menu loop.
+     * Creates all services, loads saved data from files, and starts the main menu flow.
      */
     public static void main(String[] args) {
 
+        // --- Create core services ---
         UserService userService = new UserService();
         BookService bookService = new BookService();
+        CDService cdService = new CDService();
         LoanService loanService = new LoanService(bookService, userService);
         CDLoanService cdLoanService = new CDLoanService(bookService, userService);
         ReminderService reminderService = new ReminderService();
+        AdminService adminService = new AdminService();
 
+        // 👈 نسجّل EmailNotifier كـ observer حقيقي
+        reminderService.addObserver(new EmailNotifier());
+
+        // --- Load persisted data from files ---
         userService.loadUsersFromFile();
         bookService.loadBooksFromFile();
+        cdService.loadCDsFromFile();
         loanService.loadLoansFromFile();
-        cdLoanService.loadCDLoansFromFile(List.of());
+        cdLoanService.loadCDLoansFromFile(cdService.getAllCDs());
+        adminService.loadAdminsFromFile();
 
-        LibraryService library = new LibraryService(
+        System.out.println(GREEN + "\nLoaded all data from files successfully.\n" + RESET);
+
+        // --- Start top-level menu (Welcome + Login/Exit) ---
+        mainMenu(adminService, new LibraryService(
                 userService, bookService, loanService, cdLoanService, reminderService
-        );
+        ), bookService, cdService, userService);
+    }
 
-        LOGGER.info(GREEN + "\nLoaded all data from files successfully.\n" + RESET);
+    // =====================================================
+    //  MAIN MENU (WELCOME)
+    // =====================================================
+
+    /**
+     * Top-level menu:
+     *  - Welcome screen
+     *  - Login / Exit
+     */
+    private static void mainMenu(AdminService adminService,
+                                 LibraryService library,
+                                 BookService bookService,
+                                 CDService cdService,
+                                 UserService userService) {
 
         while (true) {
-            LOGGER.info(CYAN + "\n========== LIBRARY MENU ==========" + RESET);
-            LOGGER.info("1) Users Menu");
-            LOGGER.info("2) Books Menu");
-            LOGGER.info("3) CDs Menu");
-            LOGGER.info("4) Loans Menu");
-            LOGGER.info("5) Overdue Items");
-            LOGGER.info("6) Send Reminders");
-            LOGGER.info("7) Exit");
-            LOGGER.info(YELLOW + ENTER_CHOICE + RESET);
+            System.out.println(CYAN + "\n===== WELCOME TO LIBRARY SYSTEM =====" + RESET);
+            System.out.println("1) Login");
+            System.out.println("2) Exit");
+            System.out.print(YELLOW + ENTER_CHOICE + RESET);
 
             int choice = getInt();
 
             switch (choice) {
-                case 1 -> usersMenu(userService);
-                case 2 -> booksMenu(bookService);
-                case 3 -> cdsMenu();
-                case 4 -> loansMenu(library);
-                case 5 -> showOverdue(library);
-                case 6 -> sendReminders(library);
-                case 7 -> {
-                    LOGGER.info(GREEN + "Goodbye!" + RESET);
-                    return;
-                }
-                default -> LOGGER.warning(INVALID_MSG);
-            }
-        }
-    }
-
-    /**
-     * Displays the Users menu and handles:
-     * - adding users
-     * - listing registered users
-     */
-    private static void usersMenu(UserService us) {
-        while (true) {
-            LOGGER.info(CYAN + "\n----- USERS MENU -----" + RESET);
-            LOGGER.info("1) Add User");
-            LOGGER.info("2) List Users");
-            LOGGER.info("3) Back");
-            LOGGER.info(YELLOW + ENTER_CHOICE + RESET);
-
-            int c = getInt();
-            switch (c) {
-                case 1 -> {
-                    LOGGER.info("Enter name: ");
-                    String name = input.nextLine();
-                    LOGGER.info("Enter email: ");
-                    String email = input.nextLine();
-
-                    if (us.addUser(name, email)) {
-                        LOGGER.info(GREEN + "User added." + RESET);
-                    } else {
-                        LOGGER.warning(RED + "User already exists!" + RESET);
-                    }
-                }
+                case 1 -> loginRoleMenu(adminService, library, bookService, cdService, userService);
                 case 2 -> {
-                    LOGGER.info(CYAN + "\n--- USERS ---" + RESET);
-                    us.getAllUsers().forEach(u -> LOGGER.info(u.toString()));
-                }
-                case 3 -> {
+                    System.out.println(GREEN + "Goodbye!" + RESET);
                     return;
                 }
-                default -> LOGGER.warning(INVALID_MSG);
+                default -> System.out.println(INVALID_MSG);
             }
         }
     }
 
+    // =====================================================
+    //  LOGIN ROLE MENU (Admin / User / Librarian)
+    // =====================================================
+
     /**
-     * Handles book management:
-     * - adding books
-     * - listing all books
+     * Lets the user choose which role to log in as.
+     * For now, only Admin path is fully implemented.
      */
-    private static void booksMenu(BookService bs) {
+    private static void loginRoleMenu(AdminService adminService,
+                                      LibraryService library,
+                                      BookService bookService,
+                                      CDService cdService,
+                                      UserService userService) {
+
         while (true) {
-            LOGGER.info(CYAN + "\n----- BOOKS MENU -----" + RESET);
-            LOGGER.info("1) Add Book");
-            LOGGER.info("2) List Books");
-            LOGGER.info("3) Back");
-            LOGGER.info(YELLOW + ENTER_CHOICE + RESET);
+            System.out.println(CYAN + "\n----- LOGIN MENU -----" + RESET);
+            System.out.println("1) Login as Admin");
+            System.out.println("2) Login as User  (not implemented yet)");
+            System.out.println("3) Login as Librarian (not implemented yet)");
+            System.out.println("4) Back");
+            System.out.print(YELLOW + ENTER_CHOICE + RESET);
 
             int c = getInt();
-            switch (c) {
-                case 1 -> {
-                    LOGGER.info("Title: ");
-                    String title = input.nextLine();
-                    LOGGER.info("Author: ");
-                    String author = input.nextLine();
-                    LOGGER.info("ISBN: ");
-                    String isbn = input.nextLine();
 
-                    if (bs.addBook(title, author, isbn)) {
-                        LOGGER.info(GREEN + "Book added." + RESET);
-                    } else {
-                        LOGGER.warning(RED + "ISBN already exists!" + RESET);
-                    }
-                }
-                case 2 -> {
-                    LOGGER.info(CYAN + "\n--- BOOKS ---" + RESET);
-                    bs.getAllBooks().forEach(b -> LOGGER.info(b.toString()));
-                }
-                case 3 -> {
+            switch (c) {
+                case 1 -> adminLoginFlow(adminService, library, bookService, cdService, userService);
+                case 2 -> System.out.println(RED + "User login is not implemented yet." + RESET);
+                case 3 -> System.out.println(RED + "Librarian login is not implemented yet." + RESET);
+                case 4 -> {
                     return;
                 }
-                default -> LOGGER.warning(INVALID_MSG);
+                default -> System.out.println(INVALID_MSG);
             }
         }
     }
 
+    // =====================================================
+    //  ADMIN LOGIN + ADMIN MENU
+    // =====================================================
+
     /**
-     * Placeholder CD menu.
-     * CD management is not implemented through the UI, since CDs
-     * are added manually and not dynamically through the interface.
+     * Handles admin authentication and, on failure, allows retrying
+     * without going back to the Login Role menu.
      */
-    private static void cdsMenu() {
-        LOGGER.warning(RED + "CD MENU is not implemented because CDs are added manually in code." + RESET);
-        LOGGER.warning("Use CDLoanService to borrow CDs directly.");
+    private static void adminLoginFlow(AdminService adminService,
+                                       LibraryService library,
+                                       BookService bookService,
+                                       CDService cdService,
+                                       UserService userService) {
+
+        while (true) {
+            System.out.print("Admin username (or 0 to go back): ");
+            String userName = input.nextLine();
+
+            if ("0".equals(userName)) {
+                return;
+            }
+
+            System.out.print("Admin password: ");
+            String password = input.nextLine();
+
+            if (!adminService.login(userName, password)) {
+                System.out.println(RED + "Login failed: invalid admin credentials." + RESET);
+                continue;
+            }
+
+            System.out.println(GREEN + "Admin logged in successfully." + RESET);
+
+            try {
+                adminMenu(adminService, library, bookService, cdService, userService);
+            } finally {
+                adminService.logout();
+                System.out.println(YELLOW + "Admin logged out." + RESET);
+            }
+
+            return;
+        }
     }
 
     /**
-     * Handles all loan-related user interactions:
-     * - borrow book / CD
-     * - return book / CD
-     * - list active loans
+     * Admin-only menu.
+     * Supports:
+     *  - Add book
+     *  - Add CD
+     *  - Unregister user
+     *  - Send reminders
      */
-    private static void loansMenu(LibraryService lib) {
+    private static void adminMenu(AdminService adminService,
+                                  LibraryService library,
+                                  BookService bookService,
+                                  CDService cdService,
+                                  UserService userService) {
+
         while (true) {
-            LOGGER.info(CYAN + "\n----- LOANS MENU -----" + RESET);
-            LOGGER.info("1) Borrow Book");
-            LOGGER.info("2) Borrow CD");
-            LOGGER.info("3) Return Book");
-            LOGGER.info("4) Return CD");
-            LOGGER.info("5) List Loans");
-            LOGGER.info("6) Back");
-            LOGGER.info(YELLOW + ENTER_CHOICE + RESET);
+            System.out.println(CYAN + "\n----- ADMIN MENU -----" + RESET);
+            System.out.println("1) Add Book");
+            System.out.println("2) Add CD");
+            System.out.println("3) Unregister User");
+            System.out.println("4) Send Reminders");
+            System.out.println("5) Back / Logout");
+            System.out.print(YELLOW + ENTER_CHOICE + RESET);
 
             int c = getInt();
+
             switch (c) {
-                case 1 -> borrowBook(lib);
-                case 2 -> borrowCD(lib);
-                case 3 -> returnBook(lib);
-                case 4 -> returnCD(lib);
-                case 5 -> listLoans(lib);
-                case 6 -> {
+                case 1 -> adminAddBook(bookService);
+                case 2 -> adminAddCD(cdService);
+                case 3 -> adminUnregisterUser(userService);
+                case 4 -> adminSendReminders(library);
+                case 5 -> {
                     return;
                 }
-                default -> LOGGER.warning(INVALID_MSG);
+                default -> System.out.println(INVALID_MSG);
             }
         }
     }
 
-    /**
-     * Prompts the user to borrow a book.
-     */
-    private static void borrowBook(LibraryService lib) {
-        LOGGER.info("User name: ");
-        String uname = input.nextLine();
-        User user = lib.findUserByName(uname);
+    // -------------------- Admin actions --------------------
 
+    private static void adminAddBook(BookService bookService) {
+        System.out.print("Book title: ");
+        String title = input.nextLine();
+        System.out.print("Book author: ");
+        String author = input.nextLine();
+        System.out.print("Book ISBN: ");
+        String isbn = input.nextLine();
+
+        if (bookService.addBook(title, author, isbn)) {
+            System.out.println(GREEN + "Book added and available to borrow." + RESET);
+        } else {
+            System.out.println(RED + "Cannot add: ISBN already exists." + RESET);
+        }
+    }
+
+    private static void adminAddCD(CDService cdService) {
+        System.out.print("CD title: ");
+        String title = input.nextLine();
+        System.out.print("CD artist: ");
+        String artist = input.nextLine();
+        System.out.print("CD ID: ");
+        String id = input.nextLine();
+
+        if (cdService.addCD(title, artist, id)) {
+            System.out.println(GREEN + "CD added and available to borrow." + RESET);
+        } else {
+            System.out.println(RED + "Cannot add: CD ID already exists." + RESET);
+        }
+    }
+
+    private static void adminUnregisterUser(UserService userService) {
+        System.out.print("User name to unregister: ");
+        String name = input.nextLine();
+
+        User user = userService.findUserByName(name);
         if (user == null) {
-            LOGGER.warning(RED + "User not found!" + RESET);
+            System.out.println(RED + "User not found." + RESET);
             return;
         }
 
-        LOGGER.info("Book ISBN: ");
-        String isbn = input.nextLine();
-        Book book = lib.findBookByISBN(isbn);
-
-        if (book == null) {
-            LOGGER.warning(RED + "Book not found!" + RESET);
-            return;
-        }
-
-        if (lib.borrowBook(user, book)) {
-            LOGGER.info(GREEN + "Book borrowed." + RESET);
+        boolean removed = userService.unregisterUser(user);
+        if (removed) {
+            System.out.println(GREEN + "User unregistered successfully." + RESET);
         } else {
-            LOGGER.warning(RED + "Borrow failed (rules violation)." + RESET);
+            System.out.println(RED + "Cannot unregister: user has active loans or unpaid fines." + RESET);
         }
     }
 
-    /**
-     * Handles returning a borrowed book.
-     */
-    private static void returnBook(LibraryService lib) {
-        LOGGER.info("Book ISBN: ");
-        String isbn = input.nextLine();
-        Book book = lib.findBookByISBN(isbn);
+    private static void adminSendReminders(LibraryService library) {
+        library.sendOverdueReminders();
+        System.out.println(GREEN + "Reminder notifications triggered for overdue users." + RESET);
 
-        if (book == null) {
-            LOGGER.warning(RED + "Book not found!" + RESET);
-            return;
-        }
-
-        User borrower = lib.findLoanUser(book);
-
-        if (borrower == null) {
-            LOGGER.warning(RED + "Book is not currently borrowed." + RESET);
-            return;
-        }
-
-        if (lib.returnBook(borrower, book)) {
-            LOGGER.info(GREEN + "Book returned." + RESET);
-        } else {
-            LOGGER.warning(RED + "Return failed." + RESET);
-        }
+        List<Loan> overdueBooks = library.getOverdueLoans();
+        List<CDLoan> overdueCDs = library.getOverdueCDLoans();
+        int total = overdueBooks.size() + overdueCDs.size();
+        System.out.println(YELLOW + "Total overdue items: " + total + RESET);
     }
 
-    /**
-     * Borrowing CDs is not implemented in the console UI.
-     */
-    private static void borrowCD(LibraryService lib) {
-        LOGGER.info("User name: ");
-        String uname = input.nextLine();
-        LOGGER.warning(RED + "CD borrowing not implemented." + RESET);
-    }
+    // =====================================================
+    //  UTILITIES
+    // =====================================================
 
-    /**
-     * Returning CDs is not implemented in the console UI.
-     */
-    private static void returnCD(LibraryService lib) {
-        LOGGER.warning(RED + "CD return not implemented." + RESET);
-    }
-
-    /**
-     * Lists all active book loans.
-     */
-    private static void listLoans(LibraryService lib) {
-        LOGGER.info(CYAN + "\n--- LOANS ---" + RESET);
-        lib.getAllLoans().forEach(l -> LOGGER.info(l.toString()));
-    }
-
-    /**
-     * Shows all overdue book and CD loans.
-     */
-    private static void showOverdue(LibraryService lib) {
-        List<Loan> books = lib.getOverdueLoans();
-        List<CDLoan> cds = lib.getOverdueCDLoans();
-
-        LOGGER.info(CYAN + "\n--- OVERDUE BOOKS ---" + RESET);
-        books.forEach(b -> LOGGER.info(b.toString()));
-
-        LOGGER.info(CYAN + "\n--- OVERDUE CDs ---" + RESET);
-        cds.forEach(c -> LOGGER.info(c.toString()));
-    }
-
-    /**
-     * Triggers sending reminders to all users with overdue items.
-     */
-    private static void sendReminders(LibraryService lib) {
-        lib.sendOverdueReminders();
-        LOGGER.info(GREEN + "Reminders sent." + RESET);
-    }
-
-    /**
-     * Reads an integer from console safely.
-     * Repeats until a valid number is entered.
-     *
-     * @return integer entered by user
-     */
     private static int getInt() {
         while (true) {
             try {
-                return Integer.parseInt(input.nextLine());
+                String line = input.nextLine();
+                return Integer.parseInt(line.trim());
             } catch (Exception e) {
-                LOGGER.info(YELLOW + "Enter number: " + RESET);
+                System.out.print(YELLOW + "Enter number: " + RESET);
             }
         }
     }

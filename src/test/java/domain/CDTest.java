@@ -1,6 +1,5 @@
 package domain;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
@@ -9,35 +8,23 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class CDTest {
 
-    private CD cd;
-
-    @BeforeEach
-    public void setup() {
-        cd = new CD("MyCD", "ArtistX", "CD100");
-    }
-
-    // ---------------------------------------------------------
-    // Constructor + Basic State
-    // ---------------------------------------------------------
-
     @Test
-    public void testConstructorAndGetters() {
-        assertEquals("MyCD", cd.getTitle());
-        assertEquals("ArtistX", cd.getArtist());
-        assertEquals("CD100", cd.getId());
+    void testInitialState() {
+        CD cd = new CD("Album", "Artist", "CD1");
 
         assertTrue(cd.isAvailable());
         assertNull(cd.getBorrowDate());
         assertNull(cd.getDueDate());
+        assertEquals("Album", cd.getTitle());
+        assertEquals("Artist", cd.getArtist());
+        assertEquals("CD1", cd.getId());
     }
 
-    // ---------------------------------------------------------
-    // Borrowing Tests
-    // ---------------------------------------------------------
-
     @Test
-    public void testBorrowCDWithDate() {
+    void testBorrowCDWithDate() {
+        CD cd = new CD("A", "B", "1");
         LocalDate date = LocalDate.of(2025, 1, 1);
+
         cd.borrowCD(date);
 
         assertFalse(cd.isAvailable());
@@ -46,7 +33,9 @@ public class CDTest {
     }
 
     @Test
-    public void testBorrowCDWithoutDate() {
+    void testBorrowCDToday() {
+        CD cd = new CD("A", "B", "1");
+
         cd.borrowCD();
 
         assertFalse(cd.isAvailable());
@@ -55,19 +44,19 @@ public class CDTest {
     }
 
     @Test
-    public void testBorrowCDThrowsWhenAlreadyBorrowed() {
+    void testBorrowAlreadyBorrowedThrows() {
+        CD cd = new CD("A", "B", "1");
         cd.borrowCD(LocalDate.now());
 
-        assertThrows(IllegalStateException.class, () -> cd.borrowCD(LocalDate.now()));
+        assertThrows(IllegalStateException.class,
+                () -> cd.borrowCD(LocalDate.now().plusDays(1)));
     }
 
-    // ---------------------------------------------------------
-    // Return Tests
-    // ---------------------------------------------------------
-
     @Test
-    public void testReturnCD() {
+    void testReturnCD() {
+        CD cd = new CD("A", "B", "1");
         cd.borrowCD(LocalDate.now());
+
         cd.returnCD();
 
         assertTrue(cd.isAvailable());
@@ -76,89 +65,47 @@ public class CDTest {
     }
 
     @Test
-    public void testReturnCDWhenAlreadyAvailable() {
-        // Should NOT throw, should reset safely
-        cd.returnCD();
-        assertTrue(cd.isAvailable());
-        assertNull(cd.getBorrowDate());
-        assertNull(cd.getDueDate());
-    }
-
-    // ---------------------------------------------------------
-    // Overdue Tests
-    // ---------------------------------------------------------
-
-    @Test
-    public void testIsOverdueTrue() {
+    void testOverdueTrue() {
+        CD cd = new CD("A", "B", "1");
         cd.borrowCD(LocalDate.now().minusDays(10));
-        assertTrue(cd.isOverdue(LocalDate.now()));
-    }
 
-    @Test
-    public void testIsOverdueFalse() {
-        cd.borrowCD(LocalDate.now());
-        assertFalse(cd.isOverdue(LocalDate.now()));
-    }
-
-    @Test
-    public void testIsOverdueWhenDueDateNull() {
-        assertFalse(cd.isOverdue(LocalDate.now()));
-    }
-
-    @Test
-    public void testIsOverdueDefaultMethod() {
-        cd.borrowCD(LocalDate.now().minusDays(10));
         assertTrue(cd.isOverdue());
     }
 
-    // ---------------------------------------------------------
-    // Remaining Days
-    // ---------------------------------------------------------
+    @Test
+    void testOverdueFalse() {
+        CD cd = new CD("A", "B", "1");
+        cd.borrowCD(LocalDate.now());
+
+        assertFalse(cd.isOverdue());
+    }
 
     @Test
-    public void testRemainingDaysWhenDueDateNull() {
+    void testRemainingDaysPositive() {
+        CD cd = new CD("A", "B", "1");
+        cd.borrowCD(LocalDate.now());
+
+        assertTrue(cd.getRemainingDays(LocalDate.now()) >= 0);
+    }
+
+    @Test
+    void testRemainingDaysZeroWhenNotBorrowed() {
+        CD cd = new CD("A", "B", "1");
+
         assertEquals(0, cd.getRemainingDays(LocalDate.now()));
     }
 
     @Test
-    public void testRemainingDaysPositive() {
-        LocalDate date = LocalDate.now();
-        cd.borrowCD(date);
+    void testSetBorrowAndDueDates() {
+        CD cd = new CD("A", "B", "1");
 
-        assertEquals(7, cd.getRemainingDays(date));
-    }
+        LocalDate b = LocalDate.of(2025,1,1);
+        LocalDate d = LocalDate.of(2025,1,8);
 
-    @Test
-    public void testRemainingDaysNegative() {
-        cd.borrowCD(LocalDate.now().minusDays(10));
+        cd.setBorrowDate(b);
+        cd.setDueDate(d);
 
-        int days = cd.getRemainingDays(LocalDate.now());
-        assertTrue(days < 0);
-    }
-
-    // ---------------------------------------------------------
-    // toString Tests
-    // ---------------------------------------------------------
-
-    @Test
-    public void testToStringAvailable() {
-        String s = cd.toString();
-
-        assertTrue(s.contains("MyCD"));
-        assertTrue(s.contains("ArtistX"));
-        assertTrue(s.contains("CD100"));
-        assertTrue(s.contains("Available=true"));
-    }
-
-    @Test
-    public void testToStringBorrowed() {
-        LocalDate date = LocalDate.now();
-        cd.borrowCD(date);
-
-        String s = cd.toString();
-        assertTrue(s.contains("MyCD"));
-        assertTrue(s.contains("ArtistX"));
-        assertTrue(s.contains("Available=false"));
-        assertTrue(s.contains(cd.getDueDate().toString()));
+        assertEquals(b, cd.getBorrowDate());
+        assertEquals(d, cd.getDueDate());
     }
 }

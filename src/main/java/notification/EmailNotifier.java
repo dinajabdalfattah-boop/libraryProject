@@ -10,64 +10,57 @@ import java.util.Properties;
 import io.github.cdimascio.dotenv.Dotenv;
 
 /**
- * EmailNotifier
- * ---------------------------
- * This class implements the Observer interface and is responsible for sending
- * email notifications to library users when they have overdue books or other events.
+ * Real email notifier implementation using Jakarta Mail + Dotenv.
  *
- * The class uses:
- * - Jakarta Mail API (for sending emails)
- * - Dotenv (to load email credentials from the .env file)
- *
- * The email credentials are NOT stored in code for security reasons.
- * Instead, they are loaded from environment variables defined in a `.env` file:
- *
- * EMAIL_USERNAME=your_email@gmail.com
- * EMAIL_PASSWORD=your_app_password
+ * Requires .env file with:
+ *   EMAIL_USERNAME=your_email@gmail.com
+ *   EMAIL_PASSWORD=your_app_password
  */
 public class EmailNotifier implements Observer {
 
     private final String senderEmail;
     private final String appPassword;
 
-    /**
-     * Constructor:
-     * Loads the environment variables using Dotenv.
-     * This avoids hardcoding sensitive information in the source code.
-     */
     public EmailNotifier() {
         Dotenv dotenv = Dotenv.load();
         this.senderEmail = dotenv.get("EMAIL_USERNAME");
         this.appPassword = dotenv.get("EMAIL_PASSWORD");
     }
 
-    /**
-     * notify()
-     * -------------------------------------------------
-     * Sends an email notification to a specific user.
-     *
-     * @param user    The user who will receive the email (email taken from user.getEmail())
-     * @param message The content of the notification message
-     *
-     * Steps performed:
-     * 1. Configure SMTP properties for Gmail
-     * 2. Authenticate using the email + app password
-     * 3. Build the email (from, to, subject, body)
-     * 4. Send the email using Transport.send()
-     */
     @Override
     public void notify(User user, String message) {
 
+        // لا تبعت لو ما في يوزر
+        if (user == null) {
+            System.out.println("EmailNotifier: user is null, skipping.");
+            return;
+        }
+
         String to = user.getEmail();
 
+        // لا تبعت لو الايميل null أو "null" أو فاضي
+        if (to == null || to.trim().isEmpty() || "null".equalsIgnoreCase(to.trim())) {
+            System.out.println("EmailNotifier: user " + user.getUserName() +
+                    " has no valid email, skipping.");
+            return;
+        }
+
+        // تأكد إن بيانات الإرسال موجودة
+        if (senderEmail == null || appPassword == null) {
+            System.out.println("EmailNotifier: EMAIL_USERNAME or EMAIL_PASSWORD not set in .env");
+            return;
+        }
+
         try {
-            // 1. SMTP server settings for Gmail
+            // 1) إعدادات SMTP (Gmail)
             Properties props = new Properties();
             props.put("mail.smtp.auth", "true");
             props.put("mail.smtp.starttls.enable", "true");
             props.put("mail.smtp.host", "smtp.gmail.com");
             props.put("mail.smtp.port", "587");
+            props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
 
+            // 2) جلسة مع أوثنتيكاشن
             Session session = Session.getInstance(props, new Authenticator() {
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
@@ -75,17 +68,20 @@ public class EmailNotifier implements Observer {
                 }
             });
 
+            // 3) بناء الرسالة
             Message msg = new MimeMessage(session);
             msg.setFrom(new InternetAddress(senderEmail));
             msg.setRecipient(Message.RecipientType.TO, new InternetAddress(to));
             msg.setSubject("Library Overdue Notice");
             msg.setText(message);
 
+            // 4) إرسال
             Transport.send(msg);
 
             System.out.println("Email SENT to: " + to);
 
         } catch (Exception e) {
+            System.out.println("EmailNotifier: failed to send email to " + to);
             e.printStackTrace();
         }
     }
