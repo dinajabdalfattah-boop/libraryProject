@@ -17,7 +17,6 @@ public class FileManager {
      * Prevents instantiation of this utility class.
      */
     private FileManager() {
-        // Utility class: prevent instantiation
     }
 
     /**
@@ -31,11 +30,13 @@ public class FileManager {
     public static List<String> readLines(String filePath) {
         try {
             File f = new File(filePath);
+
             if (!f.exists()) {
                 f.getParentFile().mkdirs();
                 f.createNewFile();
                 return new ArrayList<>();
             }
+
             return Files.readAllLines(Paths.get(filePath));
 
         } catch (IOException e) {
@@ -53,6 +54,7 @@ public class FileManager {
     public static void writeLines(String filePath, List<String> lines) {
         try {
             File f = new File(filePath);
+
             if (!f.exists()) {
                 f.getParentFile().mkdirs();
                 f.createNewFile();
