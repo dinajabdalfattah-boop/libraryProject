@@ -14,6 +14,13 @@ import java.util.List;
 public class FileManager {
 
     /**
+     * Prevents instantiation of this utility class.
+     */
+    private FileManager() {
+        // Utility class: prevent instantiation
+    }
+
+    /**
      * Reads all lines from a text file and returns them as a List of strings.
      * If the file does not exist, it will be created automatically and an empty
      * list will be returned.
@@ -41,7 +48,7 @@ public class FileManager {
      * If the file or its parent directory does not exist, they will be created.
      *
      * @param filePath the path to the file to write to
-     * @param lines the list of lines to write into the file
+     * @param lines    the list of lines to write into the file
      */
     public static void writeLines(String filePath, List<String> lines) {
         try {
@@ -63,7 +70,7 @@ public class FileManager {
      * If the file does not exist, it will be created automatically.
      *
      * @param filePath the path to the file
-     * @param line the text line to append
+     * @param line     the text line to append
      */
     public static void appendLine(String filePath, String line) {
         try {
