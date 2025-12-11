@@ -1,6 +1,8 @@
-Classic Hits,Various Artists,CD001,false,2025-12-11,2025-12-18
-Rock Anthems,BandX,CD002,false,2025-12-11,2025-12-18
-Pop Collection,ArtistY,CD003,true,null,null
-Jazz Vibes,ArtistZ,CD004,true,null,null
-Study Beats,DJFocus,CD005,false,2025-12-11,2025-12-18
-New CD,Some Artist,CD-100,true,null,null
+cd1,art1,01,true,null,null
+cd2,art2,02,true,null,null
+cd3,art3,03,true,null,null
+cd4,art4,04,true,null,null
+cd5,art5,05,true,null,null
+cd8,art8,8,true,null,null
+cdd,artiss,56,true,null,null
+3cd11,artt,88,true,null,null

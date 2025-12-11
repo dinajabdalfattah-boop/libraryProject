@@ -162,14 +162,29 @@ public class User {
     /**
      * Checks whether the user can be unregistered from the system.
      * A user can be unregistered only if:
-     *  - they have no active loans
-     *  - they have no unpaid fines
+     *  - they have NO active book loans
+     *  - they have NO active CD loans
+     *  - they have NO unpaid fines (fineBalance == 0)
      *
      * @return true if the user meets unregister requirements
      */
     public boolean canBeUnregistered() {
-        boolean hasActiveLoans = !activeBookLoans.isEmpty() || !activeCDLoans.isEmpty();
-        return !hasActiveLoans && fineBalance <= 0;
+
+        // 1) عنده فايْن → ممنوع ينشطب
+        if (fineBalance > 0) {
+            return false;
+        }
+
+        // 2) عنده أي Book Loan لسه active
+        boolean hasActiveBookLoan =
+                activeBookLoans.stream().anyMatch(loan -> loan != null && loan.isActive());
+
+        // 3) عنده أي CD Loan لسه active
+        boolean hasActiveCDLoan =
+                activeCDLoans.stream().anyMatch(cdLoan -> cdLoan != null && cdLoan.isActive());
+
+        // 4) مسموح فقط إذا ما عليه فايْن وما عنده ولا لون Active
+        return !hasActiveBookLoan && !hasActiveCDLoan;
     }
 
     /**

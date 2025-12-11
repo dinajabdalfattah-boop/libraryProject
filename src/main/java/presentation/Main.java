@@ -1,27 +1,13 @@
 package presentation;
 
-import domain.Book;
 import domain.CDLoan;
 import domain.Loan;
 import domain.User;
 import service.*;
-import notification.EmailNotifier;   // 👈 جديد
 
 import java.util.List;
 import java.util.Scanner;
 
-/**
- * Console entry point for the Library Management System.
- *
- * Flow:
- *  - Show welcome screen with: Login / Exit
- *  - Login as: Admin / User / Librarian (only Admin fully implemented)
- *  - Admin menu supports:
- *      * Add book
- *      * Add CD
- *      * Unregister user
- *      * Send reminders
- */
 public class Main {
 
     private static final Scanner input = new Scanner(System.in);
@@ -35,13 +21,8 @@ public class Main {
     private static final String INVALID = "Invalid.";
     private static final String INVALID_MSG = RED + INVALID + RESET;
 
-    /**
-     * Program entry point.
-     * Creates all services, loads saved data from files, and starts the main menu flow.
-     */
     public static void main(String[] args) {
 
-        // --- Create core services ---
         UserService userService = new UserService();
         BookService bookService = new BookService();
         CDService cdService = new CDService();
@@ -50,10 +31,7 @@ public class Main {
         ReminderService reminderService = new ReminderService();
         AdminService adminService = new AdminService();
 
-        // 👈 نسجّل EmailNotifier كـ observer حقيقي
-        reminderService.addObserver(new EmailNotifier());
-
-        // --- Load persisted data from files ---
+        // load from files
         userService.loadUsersFromFile();
         bookService.loadBooksFromFile();
         cdService.loadCDsFromFile();
@@ -63,21 +41,12 @@ public class Main {
 
         System.out.println(GREEN + "\nLoaded all data from files successfully.\n" + RESET);
 
-        // --- Start top-level menu (Welcome + Login/Exit) ---
+        // pass services to LibraryService + start menu
         mainMenu(adminService, new LibraryService(
                 userService, bookService, loanService, cdLoanService, reminderService
         ), bookService, cdService, userService);
     }
 
-    // =====================================================
-    //  MAIN MENU (WELCOME)
-    // =====================================================
-
-    /**
-     * Top-level menu:
-     *  - Welcome screen
-     *  - Login / Exit
-     */
     private static void mainMenu(AdminService adminService,
                                  LibraryService library,
                                  BookService bookService,
@@ -103,14 +72,6 @@ public class Main {
         }
     }
 
-    // =====================================================
-    //  LOGIN ROLE MENU (Admin / User / Librarian)
-    // =====================================================
-
-    /**
-     * Lets the user choose which role to log in as.
-     * For now, only Admin path is fully implemented.
-     */
     private static void loginRoleMenu(AdminService adminService,
                                       LibraryService library,
                                       BookService bookService,
@@ -120,8 +81,8 @@ public class Main {
         while (true) {
             System.out.println(CYAN + "\n----- LOGIN MENU -----" + RESET);
             System.out.println("1) Login as Admin");
-            System.out.println("2) Login as User  (not implemented yet)");
-            System.out.println("3) Login as Librarian (not implemented yet)");
+            System.out.println("2) Login as User ");
+            System.out.println("3) Login as Librarian ");
             System.out.println("4) Back");
             System.out.print(YELLOW + ENTER_CHOICE + RESET);
 
@@ -131,22 +92,12 @@ public class Main {
                 case 1 -> adminLoginFlow(adminService, library, bookService, cdService, userService);
                 case 2 -> System.out.println(RED + "User login is not implemented yet." + RESET);
                 case 3 -> System.out.println(RED + "Librarian login is not implemented yet." + RESET);
-                case 4 -> {
-                    return;
-                }
+                case 4 -> { return; }
                 default -> System.out.println(INVALID_MSG);
             }
         }
     }
 
-    // =====================================================
-    //  ADMIN LOGIN + ADMIN MENU
-    // =====================================================
-
-    /**
-     * Handles admin authentication and, on failure, allows retrying
-     * without going back to the Login Role menu.
-     */
     private static void adminLoginFlow(AdminService adminService,
                                        LibraryService library,
                                        BookService bookService,
@@ -154,7 +105,7 @@ public class Main {
                                        UserService userService) {
 
         while (true) {
-            System.out.print("Admin username (or 0 to go back): ");
+            System.out.print("Admin username: ");
             String userName = input.nextLine();
 
             if ("0".equals(userName)) {
@@ -182,14 +133,6 @@ public class Main {
         }
     }
 
-    /**
-     * Admin-only menu.
-     * Supports:
-     *  - Add book
-     *  - Add CD
-     *  - Unregister user
-     *  - Send reminders
-     */
     private static void adminMenu(AdminService adminService,
                                   LibraryService library,
                                   BookService bookService,
@@ -202,7 +145,7 @@ public class Main {
             System.out.println("2) Add CD");
             System.out.println("3) Unregister User");
             System.out.println("4) Send Reminders");
-            System.out.println("5) Back / Logout");
+            System.out.println("5) Logout");
             System.out.print(YELLOW + ENTER_CHOICE + RESET);
 
             int c = getInt();
@@ -212,15 +155,13 @@ public class Main {
                 case 2 -> adminAddCD(cdService);
                 case 3 -> adminUnregisterUser(userService);
                 case 4 -> adminSendReminders(library);
-                case 5 -> {
-                    return;
-                }
+                case 5 -> { return; }
                 default -> System.out.println(INVALID_MSG);
             }
         }
     }
 
-    // -------------------- Admin actions --------------------
+    // ---------- Admin actions ----------
 
     private static void adminAddBook(BookService bookService) {
         System.out.print("Book title: ");
@@ -231,7 +172,8 @@ public class Main {
         String isbn = input.nextLine();
 
         if (bookService.addBook(title, author, isbn)) {
-            System.out.println(GREEN + "Book added and available to borrow." + RESET);
+            // addBook جوّا نفسه بعمل save للفايل
+            System.out.println(GREEN + "Book added and saved to file." + RESET);
         } else {
             System.out.println(RED + "Cannot add: ISBN already exists." + RESET);
         }
@@ -246,7 +188,8 @@ public class Main {
         String id = input.nextLine();
 
         if (cdService.addCD(title, artist, id)) {
-            System.out.println(GREEN + "CD added and available to borrow." + RESET);
+            // addCD جوّا نفسه بعمل save للفايل
+            System.out.println(GREEN + "CD added and saved to file." + RESET);
         } else {
             System.out.println(RED + "Cannot add: CD ID already exists." + RESET);
         }
@@ -264,7 +207,8 @@ public class Main {
 
         boolean removed = userService.unregisterUser(user);
         if (removed) {
-            System.out.println(GREEN + "User unregistered successfully." + RESET);
+            // unregisterUser جوّا نفسه بعمل save للفايل
+            System.out.println(GREEN + "User unregistered and saved to file." + RESET);
         } else {
             System.out.println(RED + "Cannot unregister: user has active loans or unpaid fines." + RESET);
         }
@@ -280,9 +224,7 @@ public class Main {
         System.out.println(YELLOW + "Total overdue items: " + total + RESET);
     }
 
-    // =====================================================
-    //  UTILITIES
-    // =====================================================
+    // ---------- Utils ----------
 
     private static int getInt() {
         while (true) {

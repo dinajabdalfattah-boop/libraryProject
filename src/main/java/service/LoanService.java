@@ -9,14 +9,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * This service handles all operations related to book loans in the library.
- * It manages creating loans, returning books, loading and saving loan data,
- * and checking which loans are overdue.
- *
- * Each loan connects a specific user to a specific book, and
- * the service ensures that borrowing rules and restrictions are respected.
- */
 public class LoanService {
 
     private final List<Loan> loans = new ArrayList<>();
@@ -24,31 +16,11 @@ public class LoanService {
     private final UserService userService;
     private static final String LOANS_FILE = "src/main/resources/data/loans.txt";
 
-    /**
-     * Creates a LoanService object with dependencies needed for loading loan data.
-     *
-     * @param bookService handles book lookup
-     * @param userService handles user lookup
-     */
     public LoanService(BookService bookService, UserService userService) {
         this.bookService = bookService;
         this.userService = userService;
     }
 
-    /**
-     * Attempts to create a new loan for a user and a book.
-     * Borrowing is allowed only if:
-     *  - the user has no unpaid fines
-     *  - the user has no overdue items
-     *  - the book is not already borrowed
-     *
-     * If successful, the loan is stored, connected to the user,
-     * and saved into the loan file.
-     *
-     * @param user the user borrowing the book
-     * @param book the book being borrowed
-     * @return true if the loan was successfully created
-     */
     public boolean createLoan(User user, Book book) {
 
         if (user.getFineBalance() > 0) return false;
@@ -59,40 +31,46 @@ public class LoanService {
 
         user.addLoan(loan);
         loans.add(loan);
-        saveLoanToFile(loan);
 
+        saveAllLoansToFile();   // 🔥 تعديل مهم
         return true;
     }
 
     /**
-     * Saves a single loan entry to the loan file.
-     * Each line contains:
-     * username, isbn, borrowDate, dueDate, activeStatus
-     *
-     * @param loan the loan to write to the file
+     * Saves ALL loans to the file (not one per line append).
+     * Format:
+     * username,isbn,borrowDate,dueDate,activeStatus
      */
-    private void saveLoanToFile(Loan loan) {
-        String line = String.join(",",
-                loan.getUser().getUserName(),
-                loan.getBook().getIsbn(),
-                loan.getBorrowDate().toString(),
-                loan.getDueDate().toString(),
-                String.valueOf(loan.isActive())
-        );
+    public void saveAllLoansToFile() {
 
-        FileManager.appendLine(LOANS_FILE, line);
+        List<String> lines = new ArrayList<>();
+
+        for (Loan loan : loans) {
+
+            if (loan == null ||
+                    loan.getUser() == null ||
+                    loan.getBook() == null ||
+                    loan.getBorrowDate() == null ||
+                    loan.getDueDate() == null) {
+                continue;
+            }
+
+            String line = String.join(",",
+                    loan.getUser().getUserName(),
+                    loan.getBook().getIsbn(),
+                    loan.getBorrowDate().toString(),
+                    loan.getDueDate().toString(),
+                    String.valueOf(loan.isActive())
+            );
+
+            lines.add(line);
+        }
+
+        FileManager.writeLines(LOANS_FILE, lines);
     }
 
-    /**
-     * Loads all loan data from the file and reconstructs the loan list.
-     * For each line, the method:
-     *  - finds the user by name
-     *  - finds the book by ISBN
-     *  - recreates a loan with correct borrow and due dates
-     *  - restores active/inactive status
-     *
-     * If either the user or book is missing, the loan is skipped.
-     */
+    // ------------ ORIGINAL CODE (unchanged) ------------
+
     public void loadLoansFromFile() {
 
         loans.clear();
@@ -116,7 +94,6 @@ public class LoanService {
 
             if (user == null || book == null) continue;
 
-            // Create loan manually with correct dates
             Loan loan = new Loan(user, book);
             loan.setBorrowDate(borrowDate);
             loan.setDueDate(dueDate);
@@ -133,14 +110,6 @@ public class LoanService {
         }
     }
 
-    /**
-     * Returns a borrowed book by marking its loan as inactive.
-     * The method looks for a matching active loan for the given user and book.
-     *
-     * @param user the user returning the book
-     * @param book the book being returned
-     * @return true if the loan was found and closed
-     */
     public boolean returnLoan(User user, Book book) {
 
         for (Loan loan : loans) {
@@ -150,17 +119,14 @@ public class LoanService {
             {
                 loan.returnBook();
                 user.returnLoan(loan);
+
+                saveAllLoansToFile();  // 🔥 تعديل مهم
                 return true;
             }
         }
         return false;
     }
 
-    /**
-     * Checks all loans and returns only those that are overdue.
-     *
-     * @return list of overdue loans
-     */
     public List<Loan> getOverdueLoans() {
         List<Loan> out = new ArrayList<>();
 
@@ -172,9 +138,6 @@ public class LoanService {
         return out;
     }
 
-    /**
-     * @return all loans recorded in the system
-     */
     public List<Loan> getAllLoans() {
         return loans;
     }

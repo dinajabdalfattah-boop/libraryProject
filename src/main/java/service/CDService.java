@@ -3,21 +3,17 @@ package service;
 import domain.CD;
 import file.FileManager;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Service responsible for managing CD items in the library system.
- * It provides functionality for:
- * - adding new CDs
- * - searching for CDs
- * - saving CDs to a file
- * - loading CDs from a file
- * - retrieving CDs by ID
- *
- * All CD objects are stored in memory, and modifications are persisted
- * to "cds.txt" using the FileManager utility.
+ * Supports:
+ * - adding CDs
+ * - loading CDs from file
+ * - saving CDs to file
+ * - searching CDs
+ * - finding CDs by ID
  */
 public class CDService {
 
@@ -25,13 +21,8 @@ public class CDService {
     private static final String CD_FILE = "src/main/resources/data/cds.txt";
 
     /**
-     * Adds a new CD to the system only if its ID is unique.
-     * If the CD is added successfully, the list is saved to storage.
-     *
-     * @param title  the CD's title
-     * @param artist the artist name
-     * @param id     unique identifier for the CD
-     * @return true if added successfully, false if duplicate ID
+     * Adds a new CD only if ID does not already exist.
+     * Automatically saves the updated CD list to file.
      */
     public boolean addCD(String title, String artist, String id) {
 
@@ -40,17 +31,16 @@ public class CDService {
 
         CD cd = new CD(title, artist, id);
         cds.add(cd);
-        saveCDsToFile();
 
+        saveCDsToFile();   // 🔥 حفظ تلقائي
         return true;
     }
 
     /**
-     * Saves all CDs into the storage file.
-     * Each CD is written as:
+     * Saves all CDs to the file in this format:
      * title,artist,id,available,borrowDate,dueDate
      */
-    private void saveCDsToFile() {
+    public void saveCDsToFile() {
 
         List<String> lines = new ArrayList<>();
 
@@ -63,6 +53,7 @@ public class CDService {
                     c.getBorrowDate() == null ? "null" : c.getBorrowDate().toString(),
                     c.getDueDate() == null ? "null" : c.getDueDate().toString()
             );
+
             lines.add(line);
         }
 
@@ -70,14 +61,8 @@ public class CDService {
     }
 
     /**
-     * Loads CD records from the file and reconstructs the CD list.
-     *
-     * The method safely handles:
-     * - missing or empty files
-     * - malformed or incomplete lines
-     * - restoring borrow date and due date
-     *
-     * If a CD was borrowed when saved, its state is restored.
+     * Loads CDs from file.
+     * Borrow state is always reset — CDLoanService handles restoring active loans.
      */
     public void loadCDsFromFile() {
 
@@ -98,25 +83,16 @@ public class CDService {
 
             CD cd = new CD(p[0], p[1], p[2]);
 
-            // 👇 مهم: تأكد إن الـ CD مو مستعار أبداً بالبداية
-            cd.returnCD();   // يجعل available=true ويصفّر التواريخ
+            // Always reset state — active loans will be re-applied by CDLoanService
+            cd.returnCD();
 
             cds.add(cd);
         }
     }
 
-
-
     /**
-     * Searches for CDs using a case-insensitive keyword.
-     * The search checks:
-     * - title
-     * - artist
-     * - CD ID
-     *
-     * @param keyword search term (must not be null)
-     * @return list of matching CDs, or full list if keyword is blank
-     * @throws NullPointerException if keyword is null
+     * Searches for CDs by keyword (case-insensitive)
+     * Checks title, artist, ID.
      */
     public List<CD> search(String keyword) {
 
@@ -142,10 +118,7 @@ public class CDService {
     }
 
     /**
-     * Finds a CD using its unique ID.
-     *
-     * @param id the CD's ID
-     * @return matching CD or null if none found
+     * Finds a CD by its ID.
      */
     public CD findCDById(String id) {
         for (CD c : cds)
@@ -156,8 +129,6 @@ public class CDService {
 
     /**
      * Returns all CDs currently stored in memory.
-     *
-     * @return list of CDs
      */
     public List<CD> getAllCDs() {
         return cds;
