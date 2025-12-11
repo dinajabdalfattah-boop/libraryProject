@@ -1,14 +1,17 @@
 @startuml
-class notification.EmailNotifier {
-- String senderEmail
-- String appPassword
-+ void notify(User,String)
+class service.CDService {
+- List<CD> cds
+- {static} String CD_FILE
++ boolean addCD(String,String,String)
++ void saveCDsToFile()
+- boolean parseBooleanStrict(String)
+- LocalDate parseDateOrNull(String)
++ void loadCDsFromFile()
++ List<CD> search(String)
++ CD findCDById(String)
++ List<CD> getAllCDs()
 }
 
-
-interface domain.fine.FineStrategy {
-~ int calculateFine(int)
-}
 
 class service.ReminderService {
 - List<Observer> observers
@@ -18,19 +21,27 @@ class service.ReminderService {
 }
 
 
-class domain.fine.CDFineStrategy {
-+ int calculateFine(int)
-}
-
-class service.AdminService {
-- List<Admin> admins
-- Admin loggedInAdmin
-+ boolean addAdmin(String,int,String)
-+ boolean login(String,String)
-+ void logout()
-+ boolean isAdminLoggedIn()
-+ Admin getLoggedInAdmin()
-+ List<Admin> getAllAdmins()
+class service.LoanServiceTest {
+- LoanService loanService
+- BookService bookService
+- UserService userService
++ void setUp()
++ void testCreateLoanSuccess()
++ void testCreateLoanFailsWhenBookAlreadyBorrowed()
++ void testCreateLoanFailsWhenUserHasFine()
++ void testCreateLoanFailsWhenUserHasOverdueLoan()
++ void testCreateLoanFailsWhenUserIsNull()
++ void testCreateLoanFailsWhenBookIsNull()
++ void testReturnLoanSuccess()
++ void testReturnLoanFailsWhenNoLoan()
++ void testReturnLoanFailsWhenLoanInactive()
++ void testReturnLoanFailsWhenUserMatchesButBookDiffers()
++ void testReturnLoanFailsWhenBookMatchesButUserDiffers()
++ void testLoadLoansFromFile()
++ void testLoadLoansFromFileIgnoresInactiveLoan()
++ void testLoadLoansFromFileWithInvalidLines()
++ void testGetOverdueLoans()
++ void testGetOverdueLoansEmpty()
 }
 
 
@@ -48,6 +59,7 @@ class service.LibraryService {
 + boolean returnBook(User,Book)
 + boolean borrowCD(User,CD)
 + boolean returnCD(User,CD)
+- void cdSave()
 + List<Loan> getOverdueLoans()
 + List<CDLoan> getOverdueCDLoans()
 + List<Loan> getAllLoans()
@@ -104,6 +116,426 @@ class domain.Admin {
 }
 
 
+class service.BookServiceTest {
+- BookService bookService
+- {static} String FILE
++ void setUp()
++ void testAddBookSuccess()
++ void testAddBookDuplicateISBN()
++ void testAddBookNullValuesAllowed()
++ void testLoadBooksFromFileValid()
++ void testLoadBooksFromFileInvalidLine()
++ void testLoadBooksFromFileMissingFields()
++ void testLoadBooksFromFileAvailableTrueIgnoresDates()
++ void testLoadBooksFromFileAvailableNullTreatedAsFalse()
++ void testSearchFindsResults()
++ void testSearchNoMatches()
++ void testSearchCaseInsensitive()
++ void testSearchEmptyKeyword()
++ void testSearchSpacesKeyword()
++ void testSearchNullKeywordThrows()
++ void testFindBookByIsbnNotFound()
++ void testFindBookByIsbnFound()
++ void testGetAllBooksEmpty()
++ void testGetAllBooksNotEmpty()
+}
+
+
+class service.LibrarianServiceTest {
+~ void testAddLibrarianSuccessAndSaveToFile()
+~ void testAddLibrarianDuplicateIdReturnsFalse()
+~ void testLoginSuccess()
+~ void testLoginFailWrongCredentials()
+~ void testLoginWhenAlreadyLoggedInReturnsFalse()
+~ void testLogoutWhenLoggedIn()
+~ void testLogoutWhenNoOneLoggedInDoesNothing()
+~ void testGetOverdueBooksDelegatesToLibraryService()
+~ void testGetOverdueCDsDelegatesToLibraryService()
+~ void testGetTotalOverdueItems()
+~ void testLoadLibrariansFromFileWithValidAndInvalidLines()
+~ void testLoadLibrariansFromFileNullListClearsExisting()
+~ void testGetAllLibrariansReturnsLiveListReference()
+}
+
+class domain.CDLoanTest {
+- {static} String USER_NAME
+- {static} String USER_EMAIL
+- {static} String CD_TITLE
+- {static} String CD_ARTIST
+- {static} String CD_CODE
+- User user
+- CD cd
++ void setUp()
++ void testConstructorInitializesFieldsCorrectly()
++ void testReturnCDMakesLoanInactiveAndCDAvailable()
++ void testReturnCDDoesNothingIfAlreadyInactive()
++ void testIsOverdueTrue()
++ void testIsOverdueFalseFutureDueDate()
++ void testIsOverdueFalseWhenLoanInactive()
++ void testGetOverdueDaysWhenNotOverdue()
++ void testGetOverdueDaysWhenOverdue()
++ void testCalculateFineUsingDefaultStrategy()
++ void testSetBorrowDate()
++ void testSetDueDate()
++ void testToStringContainsFields()
++ void testToStringAfterReturn()
+}
+
+
+class service.UserService {
+- List<User> users
+- {static} String USERS_FILE
++ boolean addUser(String,String)
++ boolean addUser(String)
++ void saveUsers()
++ void loadUsersFromFile()
++ User findUserByName(String)
++ List<User> getAllUsers()
++ boolean canBorrow(User)
++ boolean unregisterUser(User)
+}
+
+
+class notification.EmailNotifierTest {
+~ void testEmailNotifierDoesNotThrow()
+}
+
+class service.ReminderServiceTest {
+- ReminderService reminderService
+- MockNotifier notifier
+- User userA
+- User userB
++ void setUp()
++ void testAddObserverSuccess()
++ void testAddObserverNullFails()
++ void testAddObserverDuplicateFails()
++ void testSendRemindersNoOverdue()
++ void testSendRemindersOverdueBooksOnly()
++ void testSendRemindersOverdueCDsOnly()
++ void testSendRemindersMixedBookAndCD()
++ void testSendRemindersTwoDifferentUsers()
+}
+
+
+class domain.Librarian {
+- int librarianId
+- String name
+- String password
+- boolean loggedIn
++ boolean login(String,String)
++ void logout()
++ boolean isLoggedIn()
++ int getLibrarianId()
++ String getName()
++ String getPassword()
++ void setPassword(String)
++ String toString()
+}
+
+
+class service.LibraryServiceTest {
+- UserService userService
+- BookService bookService
+- LoanService loanService
+- CDLoanService cdLoanService
+- ReminderService reminderService
+- LibraryService library
+- User user
+- Book book
+- CD cd
+- Loan loan
+- CDLoan cdLoan
++ void setUp()
++ void testFindUserByName()
++ void testFindBookByISBN()
++ void testFindCDByIdSuccess()
++ void testFindCDByIdNotFound()
++ void testFindCDByIdListNull()
++ void testFindLoanUserReturnsCorrectUser()
++ void testFindLoanUserReturnsNullIfNotFound()
++ void testFindLoanUserIgnoresDifferentBook()
++ void testFindLoanUserIgnoresInactiveLoan()
++ void testBorrowBookSuccess()
++ void testBorrowBookFails()
++ void testReturnBookSuccess()
++ void testBorrowCDSuccess()
++ void testReturnCDSuccess()
++ void testGetOverdueLoans()
++ void testGetOverdueCDLoans()
++ void testGetAllLoans()
++ void testGetAllCDLoans()
++ void testSendOverdueReminders()
++ void testGetAllUsers()
++ void testGetAllBooks()
+}
+
+
+class service.UserServiceTest {
+- UserService userService
++ void setUp()
++ void testAddUserSuccess()
++ void testAddUserDuplicateFails()
++ void testAddUserDuplicateIgnoreCaseFails()
++ void testAddUserWithEmail()
++ void testAddUserWithNullEmail()
++ void testAddUserWithNullNameDoesNotCrash()
++ void testFindUserExists()
++ void testFindUserNotExists()
++ void testGetAllUsersEmpty()
++ void testGetAllUsersNonEmpty()
++ void testLoadUsersFromFileValid()
++ void testLoadUsersFromFileMissingFields()
++ void testLoadUsersFromFileFineIsInvalidString()
++ void testLoadUsersFromFileEmailEmptyString()
++ void testLoadUsersFromLineSpacesOnly()
++ void testCanBorrowUserNullReturnsFalse()
++ void testCanBorrowNoFine()
++ void testCanBorrowFailsDueToFine()
++ void testCanBorrowFailsDueToOverdueLoan()
++ void testUnregisterUserSuccess()
++ void testUnregisterUserFailsDueToFine()
++ void testUnregisterUserFailsDueToActiveBookLoan()
++ void testUnregisterUserFailsDueToActiveCDLoan()
++ void testUnregisterUserNull()
++ void testUnregisterUserNotInList()
++ void testUnregisterUserFailsBecauseDifferentInstance()
++ void testUnregisterUserWithNullName()
++ void testUnregisterUserHasBothActiveBookAndCDLoans()
+}
+
+
+class domain.CD {
+- String title
+- String artist
+- String id
+- boolean available
+- LocalDate borrowDate
+- LocalDate dueDate
++ void borrowCD(LocalDate)
++ void borrowCD()
++ void returnCD()
++ boolean isOverdue(LocalDate)
++ boolean isOverdue()
++ int getRemainingDays(LocalDate)
++ boolean isAvailable()
++ LocalDate getBorrowDate()
++ LocalDate getDueDate()
++ String getTitle()
++ String getArtist()
++ String getId()
++ void setBorrowDate(LocalDate)
++ void setDueDate(LocalDate)
++ String toString()
+}
+
+
+class file.FileManager {
++ {static} List<String> readLines(String)
++ {static} void writeLines(String,List<String>)
++ {static} void appendLine(String,String)
+}
+
+class service.LoanService {
+- List<Loan> loans
+- BookService bookService
+- UserService userService
+- {static} String LOANS_FILE
++ boolean createLoan(User,Book)
++ void saveAllLoansToFile()
++ void loadLoansFromFile()
++ boolean returnLoan(User,Book)
++ List<Loan> getOverdueLoans()
++ List<Loan> getAllLoans()
+}
+
+
+class domain.LoanTest {
+- User user
+- Book book
++ void setUp()
++ void testConstructorAndGetters()
++ void testSetBorrowDate()
++ void testSetDueDate()
++ void testIsOverdueCustomDates()
++ void testIsOverdueDefaultFalse()
++ void testIsOverdueDefaultTrue()
++ void testIsOverdueWhenDueDateNull()
++ void testIsOverdueWhenInactive()
++ void testGetOverdueDaysZeroWhenNotOverdue()
++ void testGetOverdueDaysPositive()
++ void testFineCalculationDefaultStrategy()
++ void testFineCalculationCustomStrategy()
++ void testSetFineStrategyNull()
++ void testCalculateFineWhenStrategyIsNullThrowsException()
++ void testReturnBook()
++ void testReturnBookWhenAlreadyInactive()
++ void testToStringContainsAllFields()
++ void testToStringAfterReturn()
+}
+
+
+class service.CDLoanServiceTest {
+- BookService bookService
+- UserService userService
+- User user
+- CD cd
+- CDLoanService cdLoanService
+~ void setUp()
+~ void testCreateCDLoanReturnsFalseWhenUserIsNull()
+~ void testCreateCDLoanReturnsFalseWhenCDIsNull()
+~ void testLoadCDLoansFromFileInactiveLoanDoesNotStayActiveOnUser()
+~ void testCreateCDLoanReturnsFalseWhenUserHasFine()
+~ void testCreateCDLoanReturnsFalseWhenUserHasOverdueLoans()
+~ void testCreateCDLoanReturnsFalseWhenCDNotAvailable()
+~ void testCreateCDLoanSuccess()
+~ void testReturnCDLoanReturnsFalseWhenUserOrCDIsNull()
+~ void testReturnCDLoanReturnsFalseWhenNoMatchingLoan()
+~ void testReturnCDLoanSuccess()
+~ void testLoadCDLoansFromFileWhenLinesNull()
+~ void testLoadCDLoansFromFileSkipsInvalidLinesAndLoadsValidOnes()
+~ void testGetOverdueCDLoansReturnsOnlyOverdueLoans()
+~ void testGetAllCDLoansReflectsInternalList()
+}
+
+
+class notification.EmailNotifier {
+- String senderEmail
+- String appPassword
++ void notify(User,String)
+}
+
+
+interface domain.fine.FineStrategy {
+~ int calculateFine(int)
+}
+
+class file.FileManagerTest {
+- String BASE_DIR
++ void reset()
+- void deleteRecursive(File)
++ void testReadLinesFileDoesNotExistCreatesEmptyList()
++ void testReadLinesIOExceptionCatchesError()
++ void testWriteLinesSuccess()
++ void testWriteLinesIOExceptionHandled()
++ void testAppendLineSuccess()
++ void testAppendLineIOExceptionHandled()
+}
+
+
+class service.CDServiceTest {
+~ void testAddCD_Success()
+~ void testAddCD_DuplicateFails()
+~ void testSearchByKeyword()
+~ void testSearchEmptyKeywordReturnsAll()
+~ void testSearchNullKeywordThrows()
+~ void testFindCDById()
+~ void testFindCDByIdNotFound()
+~ void testLoadCDsFromFile()
+~ void testLoadCDsFromFileNullList()
+~ void testLoadCDsMalformedLinesHandledSafely()
+}
+
+class domain.UserTest {
+- User user
+- Book book1
+- Book book2
+- CD cd1
+- CD cd2
++ void setUp()
++ void testConstructorWithNameOnly()
++ void testConstructorWithNameAndEmail()
++ void testSetEmail()
++ void testSetFineBalance()
++ void testAddLoanSuccessWhenNoFineAndNoOverdue()
++ void testAddLoanFailsWhenUserHasFine()
++ void testAddLoanFailsWhenUserHasOverdueLoan()
++ void testAddCDLoanSuccess()
++ void testAddCDLoanFailsWhenFine()
++ void testAddCDLoanFailsWhenOverdueExists()
++ void testReturnLoanRemovesAndCallsReturnBook()
++ void testReturnLoanDoesNothingIfNotInList()
++ void testReturnCDLoanRemovesAndCallsReturnCD()
++ void testReturnCDLoanDoesNothingIfNotInList()
++ void testHasOverdueLoansFalseInitially()
++ void testHasOverdueLoansWithOnlyNonOverdue()
++ void testHasOverdueLoansTrueForBook()
++ void testHasOverdueLoansTrueForCD()
++ void testGetOverdueCountMixed()
++ void testPayFinePartial()
++ void testPayFineClearsAllWhenAmountGreaterOrEqual()
++ void testCanBeUnregisteredWhenNoLoansAndNoFine()
++ void testCannotBeUnregisteredDueToBookLoan()
++ void testCannotBeUnregisteredDueToCDLoan()
++ void testCannotBeUnregisteredDueToFine()
++ void testCannotBeUnregisteredWithLoanAndFine()
++ void testToStringContainsNameEmailAndFine()
+}
+
+
+class domain.fine.CDFineStrategy {
++ int calculateFine(int)
+}
+
+class service.AdminService {
+- List<Admin> admins
+- Admin loggedInAdmin
+- {static} String ADMINS_FILE
++ boolean addAdmin(String,int,String)
++ boolean login(String,String)
++ void logout()
++ boolean isAdminLoggedIn()
++ Admin getLoggedInAdmin()
++ List<Admin> getAllAdmins()
++ void saveAdminsToFile()
++ void loadAdminsFromFile()
+}
+
+
+class service.AdminServiceTest {
+- AdminService adminService
+- String name1
+- String pass1
+- int id1
+- String name2
+- String pass2
+- int id2
++ void setUp()
++ void testAddAdminSuccess()
++ void testAddAdminFailsWhenDuplicateId()
++ void testAddAdminFailsWhenDuplicateUsername()
++ void testLoginSuccess()
++ void testLoginFailsWrongPassword()
++ void testLoginFailsWrongUsername()
++ void testLoginFailsWhenAlreadyLoggedIn()
++ void testLogoutSuccess()
++ void testLogoutWhenNoAdminLoggedIn()
++ void testGetLoggedInAdminReturnsCorrectObject()
++ void testIsAdminLoggedInFalseByDefault()
++ void testGetAllAdmins()
+}
+
+
+class domain.BookTest {
+- Book book
++ void setUp()
++ void testConstructor()
++ void testBorrowBookWithDate()
++ void testBorrowBookWithoutDate()
++ void testBorrowThrowsIfAlreadyBorrowed()
++ void testReturnBook()
++ void testReturnBookWhenAlreadyAvailable()
++ void testIsOverdueWithCustomDate()
++ void testIsOverdueDefaultMethod()
++ void testIsNotOverdueIfNeverBorrowed()
++ void testGetRemainingDaysWhenNoDueDate()
++ void testGetRemainingDaysPositive()
++ void testGetRemainingDaysNegative()
++ void testSettersForLoading()
++ void testToStringWhenAvailable()
++ void testToStringWhenBorrowed()
+}
+
+
 class domain.CDLoan {
 - User user
 - CD cd
@@ -152,17 +584,35 @@ class domain.User {
 }
 
 
-class service.UserService {
-- List<User> users
-- {static} String USERS_FILE
-+ boolean addUser(String,String)
-+ boolean addUser(String)
-- void saveUsers()
-+ void loadUsersFromFile()
-+ User findUserByName(String)
-+ List<User> getAllUsers()
-+ boolean canBorrow(User)
-+ boolean unregisterUser(User)
+class domain.CDTest {
+~ void testInitialState()
+~ void testBorrowCDWithDate()
+~ void testBorrowCDToday()
+~ void testBorrowAlreadyBorrowedThrows()
+~ void testReturnCD()
+~ void testOverdueTrue()
+~ void testOverdueFalse()
+~ void testRemainingDaysPositive()
+~ void testRemainingDaysZeroWhenNotBorrowed()
+~ void testSetBorrowAndDueDates()
+}
+
+class domain.AdminTest {
+- Admin admin
++ void setUp()
++ void testConstructorAndGetters()
++ void testLoginSuccess()
++ void testLoginFailWrongUsername()
++ void testLoginFailWrongPassword()
++ void testLoginFailCompletelyWrong()
++ void testLogout()
++ void testSetUserName()
++ void testSetUserNameToNull()
++ void testSetPassword()
++ void testSetPasswordEmpty()
++ void testToStringContainsFields()
++ void testToStringAfterLogin()
++ void testAdminIdIsFinal()
 }
 
 
@@ -170,34 +620,13 @@ class service.BookService {
 - List<Book> books
 - {static} String BOOKS_FILE
 + boolean addBook(String,String,String)
-- void saveBooksToFile()
++ void saveBooksToFile()
+- boolean parseBooleanStrict(String)
+- LocalDate parseDateOrNull(String)
 + void loadBooksFromFile()
 + List<Book> search(String)
 + Book findBookByISBN(String)
 + List<Book> getAllBooks()
-}
-
-
-class domain.CD {
-- String title
-- String artist
-- String id
-- boolean available
-- LocalDate borrowDate
-- LocalDate dueDate
-+ void borrowCD(LocalDate)
-+ void borrowCD()
-+ void returnCD()
-+ boolean isOverdue(LocalDate)
-+ boolean isOverdue()
-+ int getRemainingDays(LocalDate)
-+ boolean isAvailable()
-+ LocalDate getBorrowDate()
-+ LocalDate getDueDate()
-+ String getTitle()
-+ String getArtist()
-+ String getId()
-+ String toString()
 }
 
 
@@ -235,7 +664,7 @@ class service.CDLoanService {
 - {static} String LOANS_FILE
 + boolean createCDLoan(User,CD)
 + boolean returnCDLoan(User,CD)
-~ void saveLoanToFile(CDLoan)
++ void saveAllLoansToFile()
 + void loadCDLoansFromFile(List<CD>)
 + List<CDLoan> getOverdueCDLoans()
 + List<CDLoan> getAllCDLoans()
@@ -243,49 +672,30 @@ class service.CDLoanService {
 
 
 class presentation.Main {
-- {static} String ENTER_CHOICE
 - {static} Scanner input
-- {static} String RED
-- {static} String GREEN
-- {static} String CYAN
-- {static} String YELLOW
-- {static} String RESET
-- {static} String INVALID
+- {static} String ENTER_CHOICE
 - {static} String INVALID_MSG
-- {static} Logger LOGGER
+- {static} String PROMPT_BOOK_ISBN
+- {static} String PROMPT_CD_ID
+- {static} String PROMPT_SEARCH_TEXT
 + {static} void main(String[])
-- {static} void usersMenu(UserService)
-- {static} void booksMenu(BookService)
-- {static} void cdsMenu()
-- {static} void loansMenu(LibraryService)
-- {static} void borrowBook(LibraryService)
-- {static} void returnBook(LibraryService)
-- {static} void borrowCD(LibraryService)
-- {static} void returnCD(LibraryService)
-- {static} void listLoans(LibraryService)
-- {static} void showOverdue(LibraryService)
-- {static} void sendReminders(LibraryService)
+- {static} void mainMenu(AdminService,LibraryService,BookService,CDService,UserService)
+- {static} void loginRoleMenu(AdminService,LibraryService,BookService,CDService,UserService)
+- {static} void adminLoginFlow(AdminService,LibraryService,BookService,CDService,UserService)
+- {static} void adminAddBook(BookService)
+- {static} void adminAddCD(CDService)
+- {static} void adminUnregisterUser(UserService)
+- {static} void librarianMenu(LibraryService)
+- {static} void userLoginFlow(UserService,LibraryService,BookService,CDService)
+- {static} void userSearchBooks(BookService)
+- {static} void userSearchCDs(CDService)
+- {static} void userBorrowBook(User,LibraryService,BookService)
+- {static} void userBorrowCD(User,LibraryService,CDService)
+- {static} void userReturnBook(User,LibraryService,BookService)
+- {static} void userReturnCD(User,LibraryService,CDService)
+- {static} void userViewStatus(User)
+- {static} void userPayFine(User,UserService)
 - {static} int getInt()
-}
-
-
-class file.FileManager {
-+ {static} List<String> readLines(String)
-+ {static} void writeLines(String,List<String>)
-+ {static} void appendLine(String,String)
-}
-
-class service.LoanService {
-- List<Loan> loans
-- BookService bookService
-- UserService userService
-- {static} String LOANS_FILE
-+ boolean createLoan(User,Book)
-- void saveLoanToFile(Loan)
-+ void loadLoansFromFile()
-+ boolean returnLoan(User,Book)
-+ List<Loan> getOverdueLoans()
-+ List<Loan> getAllLoans()
 }
 
 
@@ -296,14 +706,44 @@ class notification.MockNotifier {
 }
 
 
+class domain.LibrarianTest {
+~ void testInitialState()
+~ void testLoginSuccess()
+~ void testLoginWrongName()
+~ void testLoginWrongPassword()
+~ void testLoginWrongNameAndPassword()
+~ void testLogout()
+~ void testSetPasswordThenLogin()
+~ void testToStringContainsFields()
+}
+
+class service.LibrarianService {
+- List<Librarian> librarians
+- LibraryService libraryService
+- Librarian loggedInLibrarian
+- {static} String LIBRARIANS_FILE
++ boolean addLibrarian(int,String,String)
++ boolean login(String,String)
++ void logout()
++ boolean isLoggedIn()
++ Librarian getLoggedInLibrarian()
++ List<Librarian> getAllLibrarians()
++ List<Loan> getOverdueBooks()
++ List<CDLoan> getOverdueCDs()
++ int getTotalOverdueItems()
++ void saveLibrariansToFile()
++ void loadLibrariansFromFile()
+}
+
+
 interface notification.Observer {
 ~ void notify(User,String)
 }
 
 
 
+domain.fine.FineStrategy <|.. domain.fine.BookFineStrategy
 notification.Observer <|.. notification.EmailNotifier
 domain.fine.FineStrategy <|.. domain.fine.CDFineStrategy
-domain.fine.FineStrategy <|.. domain.fine.BookFineStrategy
 notification.Observer <|.. notification.MockNotifier
 @enduml
