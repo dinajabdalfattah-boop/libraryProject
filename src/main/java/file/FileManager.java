@@ -32,8 +32,16 @@ public class FileManager {
             File f = new File(filePath);
 
             if (!f.exists()) {
-                f.getParentFile().mkdirs();
-                f.createNewFile();
+                File parent = f.getParentFile();
+                if (parent != null) {
+                    parent.mkdirs();
+                }
+
+                boolean created = f.createNewFile();
+                if (!created && !f.exists()) {
+                    throw new IOException("Failed to create file: " + filePath);
+                }
+
                 return new ArrayList<>();
             }
 
@@ -56,8 +64,15 @@ public class FileManager {
             File f = new File(filePath);
 
             if (!f.exists()) {
-                f.getParentFile().mkdirs();
-                f.createNewFile();
+                File parent = f.getParentFile();
+                if (parent != null) {
+                    parent.mkdirs();
+                }
+
+                boolean created = f.createNewFile();
+                if (!created && !f.exists()) {
+                    throw new IOException("Failed to create file: " + filePath);
+                }
             }
 
             Files.write(Paths.get(filePath), lines);
