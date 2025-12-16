@@ -91,8 +91,14 @@ public class FileManager {
      */
     public static void appendLine(String filePath, String line) {
         try {
+            Path path = Paths.get(filePath);
+            Path parent = path.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+
             Files.write(
-                    Paths.get(filePath),
+                    path,
                     (line + System.lineSeparator()).getBytes(),
                     StandardOpenOption.APPEND,
                     StandardOpenOption.CREATE
@@ -101,4 +107,5 @@ public class FileManager {
             throw new RuntimeException(e);
         }
     }
+
 }

@@ -119,15 +119,11 @@ public class BookService {
             boolean available = parseBooleanStrict(availableStr);
             b.setAvailable(available);
 
-            if (available) {
-                b.setBorrowDate(null);
-                b.setDueDate(null);
-            } else {
-                String borrowStr = (p.length > 4) ? p[4] : null;
-                String dueStr = (p.length > 5) ? p[5] : null;
-                b.setBorrowDate(parseDateOrNull(borrowStr));
-                b.setDueDate(parseDateOrNull(dueStr));
-            }
+            String borrowStr = (p.length > 4) ? p[4] : null;
+            String dueStr = (p.length > 5) ? p[5] : null;
+
+            b.setBorrowDate(parseDateOrNull(borrowStr));
+            b.setDueDate(parseDateOrNull(dueStr));
 
             books.add(b);
         }

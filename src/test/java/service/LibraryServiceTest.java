@@ -1,12 +1,14 @@
 package service;
 
-import domain.*;
-import notification.Observer;
+import domain.Book;
+import domain.CD;
+import domain.CDLoan;
+import domain.Loan;
+import domain.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
-import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -19,228 +21,254 @@ public class LibraryServiceTest {
     private LoanService loanService;
     private CDLoanService cdLoanService;
     private ReminderService reminderService;
-
-    private LibraryService library;
-
-    private User user;
-    private Book book;
-    private CD cd;
-    private Loan loan;
-    private CDLoan cdLoan;
+    private LibraryService libraryService;
 
     @BeforeEach
-    public void setUp() {
-        // Create mocks
+    void setUp() {
         userService = mock(UserService.class);
         bookService = mock(BookService.class);
         loanService = mock(LoanService.class);
         cdLoanService = mock(CDLoanService.class);
         reminderService = mock(ReminderService.class);
 
-        library = new LibraryService(
-                userService, bookService, loanService, cdLoanService, reminderService
-        );
-
-        user = new User("Ahmad", "a@a.com");
-        book = new Book("T1", "A1", "111");
-        cd = new CD("C1", "Artist", "CD01");
-
-        loan = mock(Loan.class);
-        cdLoan = mock(CDLoan.class);
-    }
-
-    // ==========================================
-    // FINDERS TESTS
-    // ==========================================
-
-    @Test
-    public void testFindUserByName() {
-        when(userService.findUserByName("Ahmad")).thenReturn(user);
-
-        User result = library.findUserByName("Ahmad");
-        assertEquals(user, result);
+        libraryService = new LibraryService(userService, bookService, loanService, cdLoanService, reminderService);
     }
 
     @Test
-    public void testFindBookByISBN() {
-        when(bookService.findBookByISBN("111")).thenReturn(book);
+    void findUserByName_delegates() {
+        User u = mock(User.class);
+        when(userService.findUserByName("A")).thenReturn(u);
 
-        Book result = library.findBookByISBN("111");
-        assertEquals(book, result);
+        assertSame(u, libraryService.findUserByName("A"));
+        verify(userService, times(1)).findUserByName("A");
     }
 
     @Test
-    public void testFindCDByIdSuccess() {
-        List<CD> cds = List.of(cd);
-        CD result = library.findCDById(cds, "CD01");
+    void findBookByISBN_delegates() {
+        Book b = mock(Book.class);
+        when(bookService.findBookByISBN("111")).thenReturn(b);
 
-        assertEquals(cd, result);
+        assertSame(b, libraryService.findBookByISBN("111"));
+        verify(bookService, times(1)).findBookByISBN("111");
     }
 
     @Test
-    public void testFindCDByIdNotFound() {
-        List<CD> cds = List.of(cd);
-        CD result = library.findCDById(cds, "NOT_FOUND");
+    void findCDById_returnsMatch_orNull() {
+        CD c1 = new CD("T1", "A1", "1");
+        CD c2 = new CD("T2", "A2", "2");
+        List<CD> cds = List.of(c1, c2);
 
-        assertNull(result);
-    }
-
-    // EXTRA BRANCH: list is null
-    @Test
-    public void testFindCDByIdListNull() {
-        assertThrows(NullPointerException.class, () -> library.findCDById(null, "CD01"));
+        assertSame(c2, libraryService.findCDById(cds, "2"));
+        assertNull(libraryService.findCDById(cds, "X"));
     }
 
     @Test
-    public void testFindLoanUserReturnsCorrectUser() {
-        when(loan.getBook()).thenReturn(book);
-        when(loan.isActive()).thenReturn(true);
-        when(loan.getUser()).thenReturn(user);
-        when(loanService.getAllLoans()).thenReturn(List.of(loan));
+    void findLoanUser_returnsUserWhenActiveLoanMatches() {
+        Book b = mock(Book.class);
 
-        User result = library.findLoanUser(book);
+        Loan l1 = mock(Loan.class);
+        when(l1.getBook()).thenReturn(mock(Book.class));
+        when(l1.isActive()).thenReturn(true);
 
-        assertEquals(user, result);
+        Loan l2 = mock(Loan.class);
+        when(l2.getBook()).thenReturn(b);
+        when(l2.isActive()).thenReturn(true);
+
+        User u = mock(User.class);
+        when(l2.getUser()).thenReturn(u);
+
+        when(loanService.getAllLoans()).thenReturn(List.of(l1, l2));
+
+        assertSame(u, libraryService.findLoanUser(b));
     }
 
     @Test
-    public void testFindLoanUserReturnsNullIfNotFound() {
-        when(loanService.getAllLoans()).thenReturn(List.of());
+    void findLoanUser_returnsNullWhenNoMatch() {
+        Book b = mock(Book.class);
 
-        assertNull(library.findLoanUser(book));
-    }
+        Loan l = mock(Loan.class);
+        when(l.getBook()).thenReturn(mock(Book.class));
+        when(l.isActive()).thenReturn(true);
 
-    // EXTRA BRANCH: wrong book
-    @Test
-    public void testFindLoanUserIgnoresDifferentBook() {
-        Book differentBook = new Book("X", "Y", "999");
+        when(loanService.getAllLoans()).thenReturn(List.of(l));
 
-        when(loan.getBook()).thenReturn(differentBook);
-        when(loan.isActive()).thenReturn(true);
-        when(loanService.getAllLoans()).thenReturn(List.of(loan));
-
-        assertNull(library.findLoanUser(book));
-    }
-
-    // EXTRA BRANCH: inactive loan
-    @Test
-    public void testFindLoanUserIgnoresInactiveLoan() {
-        when(loan.getBook()).thenReturn(book);
-        when(loan.isActive()).thenReturn(false);
-        when(loanService.getAllLoans()).thenReturn(List.of(loan));
-
-        assertNull(library.findLoanUser(book));
-    }
-
-    // ==========================================
-    // BORROW / RETURN TESTS
-    // ==========================================
-
-    @Test
-    public void testBorrowBookSuccess() {
-        when(loanService.createLoan(user, book)).thenReturn(true);
-
-        assertTrue(library.borrowBook(user, book));
-        verify(loanService).createLoan(user, book);
+        assertNull(libraryService.findLoanUser(b));
     }
 
     @Test
-    public void testBorrowBookFails() {
-        when(loanService.createLoan(user, book)).thenReturn(false);
+    void borrowBook_whenOk_savesBookAndUsers() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-        assertFalse(library.borrowBook(user, book));
+        when(loanService.createLoan(u, b)).thenReturn(true);
+
+        assertTrue(libraryService.borrowBook(u, b));
+
+        verify(loanService, times(1)).createLoan(u, b);
+        verify(bookService, times(1)).saveBooksToFile();
+        verify(userService, times(1)).saveUsers();
     }
 
     @Test
-    public void testReturnBookSuccess() {
-        when(loanService.returnLoan(user, book)).thenReturn(true);
+    void borrowBook_whenFail_doesNotSave() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-        assertTrue(library.returnBook(user, book));
-        verify(loanService).returnLoan(user, book);
+        when(loanService.createLoan(u, b)).thenReturn(false);
+
+        assertFalse(libraryService.borrowBook(u, b));
+
+        verify(loanService, times(1)).createLoan(u, b);
+        verify(bookService, never()).saveBooksToFile();
+        verify(userService, never()).saveUsers();
     }
 
     @Test
-    public void testBorrowCDSuccess() {
-        when(cdLoanService.createCDLoan(user, cd)).thenReturn(true);
+    void returnBook_whenOk_savesBookAndUsers() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-        assertTrue(library.borrowCD(user, cd));
-        verify(cdLoanService).createCDLoan(user, cd);
+        when(loanService.returnLoan(u, b)).thenReturn(true);
+
+        assertTrue(libraryService.returnBook(u, b));
+
+        verify(loanService, times(1)).returnLoan(u, b);
+        verify(bookService, times(1)).saveBooksToFile();
+        verify(userService, times(1)).saveUsers();
     }
 
     @Test
-    public void testReturnCDSuccess() {
-        when(cdLoanService.returnCDLoan(user, cd)).thenReturn(true);
+    void returnBook_whenFail_doesNotSave() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-        assertTrue(library.returnCD(user, cd));
-        verify(cdLoanService).returnCDLoan(user, cd);
-    }
+        when(loanService.returnLoan(u, b)).thenReturn(false);
 
-    // ==========================================
-    // OVERDUE TESTS
-    // ==========================================
+        assertFalse(libraryService.returnBook(u, b));
 
-    @Test
-    public void testGetOverdueLoans() {
-        when(loanService.getOverdueLoans()).thenReturn(List.of(loan));
-
-        List<Loan> result = library.getOverdueLoans();
-        assertEquals(1, result.size());
+        verify(loanService, times(1)).returnLoan(u, b);
+        verify(bookService, never()).saveBooksToFile();
+        verify(userService, never()).saveUsers();
     }
 
     @Test
-    public void testGetOverdueCDLoans() {
-        when(cdLoanService.getOverdueCDLoans()).thenReturn(List.of(cdLoan));
+    void borrowCD_whenOk_savesUsers() {
+        User u = mock(User.class);
+        CD cd = mock(CD.class);
 
-        List<CDLoan> result = library.getOverdueCDLoans();
-        assertEquals(1, result.size());
+        when(cdLoanService.createCDLoan(u, cd)).thenReturn(true);
+        when(cdLoanService.getAllCDLoans()).thenReturn(new ArrayList<>());
+
+        assertTrue(libraryService.borrowCD(u, cd));
+
+        verify(cdLoanService, times(1)).createCDLoan(u, cd);
+        verify(userService, times(1)).saveUsers();
     }
 
     @Test
-    public void testGetAllLoans() {
-        when(loanService.getAllLoans()).thenReturn(List.of(loan));
+    void borrowCD_whenFail_doesNotSave() {
+        User u = mock(User.class);
+        CD cd = mock(CD.class);
 
-        assertEquals(1, library.getAllLoans().size());
+        when(cdLoanService.createCDLoan(u, cd)).thenReturn(false);
+
+        assertFalse(libraryService.borrowCD(u, cd));
+
+        verify(cdLoanService, times(1)).createCDLoan(u, cd);
+        verify(userService, never()).saveUsers();
     }
 
     @Test
-    public void testGetAllCDLoans() {
-        when(cdLoanService.getAllCDLoans()).thenReturn(List.of(cdLoan));
+    void returnCD_whenOk_savesUsers() {
+        User u = mock(User.class);
+        CD cd = mock(CD.class);
 
-        assertEquals(1, library.getAllCDLoans().size());
-    }
+        when(cdLoanService.returnCDLoan(u, cd)).thenReturn(true);
+        when(cdLoanService.getAllCDLoans()).thenReturn(new ArrayList<>());
 
-    // ==========================================
-    // REMINDER TEST
-    // ==========================================
+        assertTrue(libraryService.returnCD(u, cd));
 
-    @Test
-    public void testSendOverdueReminders() {
-        List<Loan> overdueLoans = List.of(loan);
-        List<CDLoan> overdueCDLoans = List.of(cdLoan);
-
-        when(loanService.getOverdueLoans()).thenReturn(overdueLoans);
-        when(cdLoanService.getOverdueCDLoans()).thenReturn(overdueCDLoans);
-
-        library.sendOverdueReminders();
-
-        verify(reminderService).sendReminders(overdueLoans, overdueCDLoans);
-    }
-
-    // ==========================================
-    // LISTS FROM SERVICES
-    // ==========================================
-
-    @Test
-    public void testGetAllUsers() {
-        when(userService.getAllUsers()).thenReturn(List.of(user));
-
-        assertEquals(1, library.getAllUsers().size());
+        verify(cdLoanService, times(1)).returnCDLoan(u, cd);
+        verify(userService, times(1)).saveUsers();
     }
 
     @Test
-    public void testGetAllBooks() {
-        when(bookService.getAllBooks()).thenReturn(List.of(book));
+    void returnCD_whenFail_doesNotSave() {
+        User u = mock(User.class);
+        CD cd = mock(CD.class);
 
-        assertEquals(1, library.getAllBooks().size());
+        when(cdLoanService.returnCDLoan(u, cd)).thenReturn(false);
+
+        assertFalse(libraryService.returnCD(u, cd));
+
+        verify(cdLoanService, times(1)).returnCDLoan(u, cd);
+        verify(userService, never()).saveUsers();
+    }
+
+    @Test
+    void getOverdueLoans_delegates() {
+        List<Loan> list = List.of(mock(Loan.class));
+        when(loanService.getOverdueLoans()).thenReturn(list);
+
+        assertSame(list, libraryService.getOverdueLoans());
+        verify(loanService, times(1)).getOverdueLoans();
+    }
+
+    @Test
+    void getOverdueCDLoans_delegates() {
+        List<CDLoan> list = List.of(mock(CDLoan.class));
+        when(cdLoanService.getOverdueCDLoans()).thenReturn(list);
+
+        assertSame(list, libraryService.getOverdueCDLoans());
+        verify(cdLoanService, times(1)).getOverdueCDLoans();
+    }
+
+    @Test
+    void getAllLoans_delegates() {
+        List<Loan> list = List.of(mock(Loan.class));
+        when(loanService.getAllLoans()).thenReturn(list);
+
+        assertSame(list, libraryService.getAllLoans());
+        verify(loanService, times(1)).getAllLoans();
+    }
+
+    @Test
+    void getAllCDLoans_delegates() {
+        List<CDLoan> list = List.of(mock(CDLoan.class));
+        when(cdLoanService.getAllCDLoans()).thenReturn(list);
+
+        assertSame(list, libraryService.getAllCDLoans());
+        verify(cdLoanService, times(1)).getAllCDLoans();
+    }
+
+    @Test
+    void sendOverdueReminders_passesBothLists() {
+        List<Loan> overdueBooks = List.of(mock(Loan.class), mock(Loan.class));
+        List<CDLoan> overdueCds = List.of(mock(CDLoan.class));
+
+        when(loanService.getOverdueLoans()).thenReturn(overdueBooks);
+        when(cdLoanService.getOverdueCDLoans()).thenReturn(overdueCds);
+
+        libraryService.sendOverdueReminders();
+
+        verify(reminderService, times(1)).sendReminders(overdueBooks, overdueCds);
+    }
+
+    @Test
+    void getAllUsers_delegates() {
+        List<User> users = List.of(mock(User.class));
+        when(userService.getAllUsers()).thenReturn(users);
+
+        assertSame(users, libraryService.getAllUsers());
+        verify(userService, times(1)).getAllUsers();
+    }
+
+    @Test
+    void getAllBooks_delegates() {
+        List<Book> books = List.of(mock(Book.class));
+        when(bookService.getAllBooks()).thenReturn(books);
+
+        assertSame(books, libraryService.getAllBooks());
+        verify(bookService, times(1)).getAllBooks();
     }
 }

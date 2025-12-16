@@ -2,12 +2,13 @@ package service;
 
 import domain.CD;
 import file.FileManager;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -16,164 +17,180 @@ import static org.mockito.Mockito.*;
 
 public class CDServiceTest {
 
+    private CDService cdService;
+    private static final String FILE = "src/main/resources/data/cds.txt";
+
+    @BeforeEach
+    void setUp() {
+        cdService = new CDService();
+    }
+
     @Test
-    void testAddCD_Success() {
-        CDService service = new CDService();
-
-        try (MockedStatic<FileManager> mocked = mockStatic(FileManager.class)) {
-
-            mocked.when(() -> FileManager.writeLines(anyString(), anyList()))
-                    .thenAnswer(inv -> null);
-
-            boolean added = service.addCD("Title", "Artist", "ID1");
-
-            assertTrue(added);
-            assertEquals(1, service.getAllCDs().size());
+    void addCD_success_saves() {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            assertTrue(cdService.addCD("T1", "A1", "C1"));
+            assertNotNull(cdService.findCDById("C1"));
+            fm.verify(() -> FileManager.writeLines(eq(FILE), anyList()), times(1));
         }
     }
 
     @Test
-    void testAddCD_DuplicateFails() {
-        CDService service = new CDService();
-
-        try (MockedStatic<FileManager> mocked = mockStatic(FileManager.class)) {
-
-            mocked.when(() -> FileManager.writeLines(anyString(), anyList()))
-                    .thenAnswer(inv -> null);
-
-            service.addCD("T1", "A1", "ID1");
-            boolean result = service.addCD("T2", "A2", "ID1");
-
-            assertFalse(result);
-            assertEquals(1, service.getAllCDs().size());
+    void addCD_duplicate_false_noSecondSave() {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            assertTrue(cdService.addCD("T1", "A1", "C1"));
+            assertFalse(cdService.addCD("T2", "A2", "C1"));
+            fm.verify(() -> FileManager.writeLines(eq(FILE), anyList()), times(1));
         }
     }
 
     @Test
-    void testSearchByKeyword() {
-        CDService service = new CDService();
+    void saveCDsToFile_writes_all_rows_including_null_dates() {
+        cdService.addCD("T1", "A1", "C1");
+        cdService.addCD("T2", "A2", "C2");
 
-        try (MockedStatic<FileManager> mocked = mockStatic(FileManager.class)) {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            cdService.saveCDsToFile();
 
-            mocked.when(() -> FileManager.writeLines(anyString(), anyList()))
-                    .thenAnswer(inv -> null);
+            fm.verify(() -> FileManager.writeLines(eq(FILE), argThat(list -> {
+                if (list == null) return false;
+                List<?> lines = (List<?>) list;
+                if (lines.size() != 2) return false;
 
-            service.addCD("Rock Album", "Queen", "CD1");
-            service.addCD("Pop Hits", "Adele", "CD2");
+                String s1 = String.valueOf(lines.get(0));
+                String s2 = String.valueOf(lines.get(1));
 
-            List<CD> result = service.search("rock");
-
-            assertEquals(1, result.size());
-            assertEquals("CD1", result.get(0).getId());
+                return s1.equals("T1,A1,C1,true,null,null")
+                        && s2.equals("T2,A2,C2,true,null,null");
+            })), times(1));
         }
     }
 
     @Test
-    void testSearchEmptyKeywordReturnsAll() {
-        CDService service = new CDService();
+    void loadCDsFromFile_linesNull_noCrash() {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            fm.when(() -> FileManager.readLines(anyString())).thenReturn(null);
 
-        try (MockedStatic<FileManager> mocked = mockStatic(FileManager.class)) {
-
-            mocked.when(() -> FileManager.writeLines(anyString(), anyList()))
-                    .thenAnswer(inv -> null);
-
-            service.addCD("A", "B", "1");
-            service.addCD("X", "Y", "2");
-
-            List<CD> result = service.search("   ");
-
-            assertEquals(2, result.size());
+            assertDoesNotThrow(() -> cdService.loadCDsFromFile());
+            assertTrue(cdService.getAllCDs().isEmpty());
         }
     }
 
     @Test
-    void testSearchNullKeywordThrows() {
-        CDService service = new CDService();
-        assertThrows(NullPointerException.class, () -> service.search(null));
+    void loadCDsFromFile_skips_blank_and_incomplete() {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            fm.when(() -> FileManager.readLines(anyString())).thenReturn(Arrays.asList(
+                    null,
+                    "",
+                    "only,two",
+                    "T1,A1,C1,true,null,null"
+            ));
+
+            cdService.loadCDsFromFile();
+
+            assertEquals(1, cdService.getAllCDs().size());
+            assertNotNull(cdService.findCDById("C1"));
+        }
     }
 
     @Test
-    void testFindCDById() {
-        CDService service = new CDService();
+    void loadCDsFromFile_available_true_forces_clear_dates() {
+        List<String> lines = List.of("T1,A1,C1,true,2025-01-01,2025-01-10");
 
-        try (MockedStatic<FileManager> mocked = mockStatic(FileManager.class)) {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            fm.when(() -> FileManager.readLines(anyString())).thenReturn(lines);
 
-            mocked.when(() -> FileManager.writeLines(anyString(), anyList()))
-                    .thenAnswer(inv -> null);
+            cdService.loadCDsFromFile();
 
-            service.addCD("A", "B", "ID1");
-
-            CD cd = service.findCDById("ID1");
-
+            CD cd = cdService.findCDById("C1");
             assertNotNull(cd);
-            assertEquals("ID1", cd.getId());
+            assertTrue(cd.isAvailable());
+            assertNull(cd.getBorrowDate());
+            assertNull(cd.getDueDate());
         }
     }
 
     @Test
-    void testFindCDByIdNotFound() {
-        CDService service = new CDService();
-        assertNull(service.findCDById("XXX"));
-    }
+    void loadCDsFromFile_available_null_treated_as_false_and_restores_dates_and_borrowed() {
+        List<String> lines = List.of("T1,A1,C1,null,2025-01-01,2025-01-08");
 
-    @Test
-    void testLoadCDsFromFile() {
-        CDService service = new CDService();
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            fm.when(() -> FileManager.readLines(anyString())).thenReturn(lines);
 
-        List<String> fake = Arrays.asList(
-                "T1,A1,ID1,true,null,null",
-                "T2,A2,ID2,false,2025-01-01,2025-01-08",
-                "",
-                "BAD,LINE"
-        );
+            cdService.loadCDsFromFile();
 
-        try (MockedStatic<FileManager> mocked = mockStatic(FileManager.class)) {
-
-            mocked.when(() -> FileManager.readLines(anyString()))
-                    .thenReturn(fake);
-
-            service.loadCDsFromFile();
-
-            assertEquals(2, service.getAllCDs().size());
-
-            CD cd1 = service.findCDById("ID1");
-            assertTrue(cd1.isAvailable());
-
-            CD cd2 = service.findCDById("ID2");
-            assertFalse(cd2.isAvailable());
-            assertEquals(LocalDate.parse("2025-01-01"), cd2.getBorrowDate());
+            CD cd = cdService.findCDById("C1");
+            assertNotNull(cd);
+            assertFalse(cd.isAvailable());
+            assertEquals(LocalDate.parse("2025-01-01"), cd.getBorrowDate());
+            assertEquals(LocalDate.parse("2025-01-08"), cd.getDueDate());
         }
     }
 
     @Test
-    void testLoadCDsFromFileNullList() {
-        CDService service = new CDService();
+    void loadCDsFromFile_available_false_restores_dates_and_borrowed() {
+        List<String> lines = List.of("T1,A1,C1,false,2025-01-01,2025-01-08");
 
-        try (MockedStatic<FileManager> mocked = mockStatic(FileManager.class)) {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            fm.when(() -> FileManager.readLines(anyString())).thenReturn(lines);
 
-            mocked.when(() -> FileManager.readLines(anyString()))
-                    .thenReturn(null);
+            cdService.loadCDsFromFile();
 
-            service.loadCDsFromFile();
-
-            assertEquals(0, service.getAllCDs().size());
+            CD cd = cdService.findCDById("C1");
+            assertNotNull(cd);
+            assertFalse(cd.isAvailable());
+            assertEquals(LocalDate.parse("2025-01-01"), cd.getBorrowDate());
+            assertEquals(LocalDate.parse("2025-01-08"), cd.getDueDate());
         }
     }
 
     @Test
-    void testLoadCDsMalformedLinesHandledSafely() {
-        CDService service = new CDService();
+    void search_null_throws() {
+        assertThrows(NullPointerException.class, () -> cdService.search(null));
+    }
 
-        List<String> fake = Collections.singletonList("BAD LINE NO COMMAS");
+    @Test
+    void search_blank_returns_all() {
+        cdService.addCD("Java", "Mark", "C1");
+        cdService.addCD("Python", "Anna", "C2");
+        assertEquals(2, cdService.search("   ").size());
+        assertEquals(2, cdService.search("").size());
+    }
 
-        try (MockedStatic<FileManager> mocked = mockStatic(FileManager.class)) {
+    @Test
+    void search_title_contains_caseInsensitive() {
+        cdService.addCD("Best Of Java", "X", "C1");
+        assertEquals(1, cdService.search("java").size());
+    }
 
-            mocked.when(() -> FileManager.readLines(anyString()))
-                    .thenReturn(fake);
+    @Test
+    void search_artist_equalsIgnoreCase() {
+        cdService.addCD("T1", "AnNa", "C1");
+        assertEquals(1, cdService.search("anna").size());
+    }
 
-            service.loadCDsFromFile();
+    @Test
+    void search_id_exact_match() {
+        cdService.addCD("T1", "A1", "C1");
+        assertEquals(1, cdService.search("C1").size());
+    }
 
-            assertEquals(0, service.getAllCDs().size());
-        }
+    @Test
+    void search_no_match_empty() {
+        cdService.addCD("T1", "A1", "C1");
+        assertTrue(cdService.search("zzz").isEmpty());
+    }
+
+    @Test
+    void findCDById_found_and_notFound() {
+        cdService.addCD("T1", "A1", "C1");
+        assertNotNull(cdService.findCDById("C1"));
+        assertNull(cdService.findCDById("X"));
+    }
+
+    @Test
+    void getAllCDs_live_list() {
+        assertTrue(cdService.getAllCDs().isEmpty());
+        cdService.getAllCDs().add(new CD("T", "A", "X"));
+        assertEquals(1, cdService.getAllCDs().size());
     }
 }

@@ -6,228 +6,307 @@ import domain.User;
 import file.FileManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 public class LoanServiceTest {
 
     private LoanService loanService;
     private BookService bookService;
     private UserService userService;
+    private static final String FILE = "src/main/resources/data/loans.txt";
 
     @BeforeEach
-    public void setUp() {
-        bookService = new BookService();
-        userService = new UserService();
+    void setUp() {
+        bookService = mock(BookService.class);
+        userService = mock(UserService.class);
         loanService = new LoanService(bookService, userService);
-
-        FileManager.writeLines("src/main/resources/data/loans.txt", new ArrayList<>());
-    }
-
-    // ---------------------------------------------------------
-    // CREATE LOAN
-    // ---------------------------------------------------------
-
-    @Test
-    public void testCreateLoanSuccess() {
-        User u = new User("Ali", "a@a.com");
-        Book b = new Book("T1", "A1", "111");
-
-        assertTrue(loanService.createLoan(u, b));
-        assertEquals(1, loanService.getAllLoans().size());
     }
 
     @Test
-    public void testCreateLoanFailsWhenBookAlreadyBorrowed() {
-        User u = new User("Ali", "a@a.com");
-        Book b = new Book("T1", "A1", "111");
+    void createLoan_userHasFine_false() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-        b.borrowBook(LocalDate.now().minusDays(1));
-        assertFalse(loanService.createLoan(u, b));
-    }
-
-    @Test
-    public void testCreateLoanFailsWhenUserHasFine() {
-        User u = new User("Ali", "a@a.com");
-        u.setFineBalance(5);
-        Book b = new Book("T1", "A1", "111");
+        when(u.getFineBalance()).thenReturn(10.0);
 
         assertFalse(loanService.createLoan(u, b));
+        assertTrue(loanService.getAllLoans().isEmpty());
     }
 
     @Test
-    public void testCreateLoanFailsWhenUserHasOverdueLoan() {
-        User u = new User("Ali", "a@a.com");
-        Book b1 = new Book("T1", "A1", "111");
-        Book b2 = new Book("T2", "A2", "222");
+    void createLoan_userHasOverdue_false() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-        Loan l = new Loan(u, b1);
-        l.setDueDate(LocalDate.now().minusDays(5));
-        u.getActiveBookLoans().add(l);
+        when(u.getFineBalance()).thenReturn(0.0);
+        when(u.hasOverdueLoans()).thenReturn(true);
 
-        assertFalse(loanService.createLoan(u, b2));
-    }
-
-    // ⭐ NEW BRANCH COVERAGE TESTS ⭐
-
-    @Test
-    public void testCreateLoanFailsWhenUserIsNull() {
-        Book b = new Book("T1", "A1", "111");
-        assertThrows(NullPointerException.class, () -> loanService.createLoan(null, b));
+        assertFalse(loanService.createLoan(u, b));
+        assertTrue(loanService.getAllLoans().isEmpty());
     }
 
     @Test
-    public void testCreateLoanFailsWhenBookIsNull() {
-        User u = new User("Ali", "a@a.com");
-        assertThrows(NullPointerException.class, () -> loanService.createLoan(u, null));
-    }
+    void createLoan_bookBorrowed_false() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-    // ---------------------------------------------------------
-    // RETURN LOAN
-    // ---------------------------------------------------------
+        when(u.getFineBalance()).thenReturn(0.0);
+        when(u.hasOverdueLoans()).thenReturn(false);
+        when(b.isBorrowed()).thenReturn(true);
 
-    @Test
-    public void testReturnLoanSuccess() {
-        User u = new User("Ali", "a@a.com");
-        Book b = new Book("T1", "A1", "111");
-
-        loanService.createLoan(u, b);
-
-        assertTrue(loanService.returnLoan(u, b));
-        assertTrue(b.isAvailable());
-        assertFalse(loanService.getAllLoans().get(0).isActive());
+        assertFalse(loanService.createLoan(u, b));
+        assertTrue(loanService.getAllLoans().isEmpty());
     }
 
     @Test
-    public void testReturnLoanFailsWhenNoLoan() {
-        User u = new User("Ali", "a@a.com");
-        Book b = new Book("T1", "A1", "111");
+    void createLoan_success_adds_and_saves() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
+
+        when(u.getFineBalance()).thenReturn(0.0);
+        when(u.hasOverdueLoans()).thenReturn(false);
+        when(b.isBorrowed()).thenReturn(false);
+
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            assertTrue(loanService.createLoan(u, b));
+
+            assertEquals(1, loanService.getAllLoans().size());
+            verify(u, times(1)).addLoan(any(Loan.class));
+            fm.verify(() -> FileManager.writeLines(anyString(), anyList()), times(1));
+        }
+    }
+
+    @Test
+    void saveAllLoansToFile_skips_invalid_loans_and_writes_only_valid() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
+
+        when(u.getUserName()).thenReturn("Ahmad");
+        when(b.getIsbn()).thenReturn("111");
+
+        Loan valid = mock(Loan.class);
+        when(valid.getUser()).thenReturn(u);
+        when(valid.getBook()).thenReturn(b);
+        when(valid.getBorrowDate()).thenReturn(LocalDate.parse("2025-01-01"));
+        when(valid.getDueDate()).thenReturn(LocalDate.parse("2025-01-20"));
+        when(valid.isActive()).thenReturn(true);
+
+        Loan nullLoan = null;
+
+        Loan missingUser = mock(Loan.class);
+        when(missingUser.getUser()).thenReturn(null);
+
+        Loan missingBook = mock(Loan.class);
+        when(missingBook.getUser()).thenReturn(u);
+        when(missingBook.getBook()).thenReturn(null);
+
+        Loan missingBorrow = mock(Loan.class);
+        when(missingBorrow.getUser()).thenReturn(u);
+        when(missingBorrow.getBook()).thenReturn(b);
+        when(missingBorrow.getBorrowDate()).thenReturn(null);
+
+        Loan missingDue = mock(Loan.class);
+        when(missingDue.getUser()).thenReturn(u);
+        when(missingDue.getBook()).thenReturn(b);
+        when(missingDue.getBorrowDate()).thenReturn(LocalDate.parse("2025-01-01"));
+        when(missingDue.getDueDate()).thenReturn(null);
+
+        loanService.getAllLoans().add(nullLoan);
+        loanService.getAllLoans().add(missingUser);
+        loanService.getAllLoans().add(missingBook);
+        loanService.getAllLoans().add(missingBorrow);
+        loanService.getAllLoans().add(missingDue);
+        loanService.getAllLoans().add(valid);
+
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            loanService.saveAllLoansToFile();
+
+            fm.verify(() -> FileManager.writeLines(eq(FILE), argThat(list -> {
+                if (list == null) return false;
+                List<?> lines = (List<?>) list;
+                if (lines.size() != 1) return false;
+                String s = String.valueOf(lines.get(0));
+                return s.equals("Ahmad,111,2025-01-01,2025-01-20,true");
+            })), times(1));
+        }
+    }
+
+    @Test
+    void loadLoansFromFile_linesNull_noCrash() {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            fm.when(() -> FileManager.readLines(anyString())).thenReturn(null);
+
+            assertDoesNotThrow(() -> loanService.loadLoansFromFile());
+            assertTrue(loanService.getAllLoans().isEmpty());
+        }
+    }
+
+    @Test
+    void loadLoansFromFile_skips_invalid_lines_and_missing_refs() {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            fm.when(() -> FileManager.readLines(anyString())).thenReturn(Arrays.asList(
+                    null,
+                    "",
+                    "bad,short,line",
+                    "Ghost,999,2025-01-01,2025-01-10,true",
+                    "Ahmad,111,2025-01-01,2025-01-10,true"
+            ));
+
+            when(userService.findUserByName("Ghost")).thenReturn(null);
+            when(bookService.findBookByISBN("999")).thenReturn(null);
+
+            User u = mock(User.class);
+            Book b = mock(Book.class);
+            when(userService.findUserByName("Ahmad")).thenReturn(u);
+            when(bookService.findBookByISBN("111")).thenReturn(b);
+            when(u.getActiveBookLoans()).thenReturn(new ArrayList<>());
+
+            loanService.loadLoansFromFile();
+
+            assertEquals(1, loanService.getAllLoans().size());
+            assertEquals(1, u.getActiveBookLoans().size());
+        }
+    }
+
+    @Test
+    void loadLoansFromFile_inactive_sets_book_available_and_not_added_to_user_list() {
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            fm.when(() -> FileManager.readLines(anyString()))
+                    .thenReturn(List.of("Ahmad,111,2025-01-01,2025-01-10,false"));
+
+            User u = mock(User.class);
+            Book b = mock(Book.class);
+
+            when(userService.findUserByName("Ahmad")).thenReturn(u);
+            when(bookService.findBookByISBN("111")).thenReturn(b);
+
+            List<Loan> userLoans = new ArrayList<>();
+            when(u.getActiveBookLoans()).thenReturn(userLoans);
+
+            loanService.loadLoansFromFile();
+
+            assertEquals(1, loanService.getAllLoans().size());
+            assertTrue(userLoans.isEmpty());
+
+            verify(b, times(1)).setAvailable(true);
+            verify(b, times(1)).setBorrowDate(null);
+            verify(b, times(1)).setDueDate(null);
+        }
+    }
+
+    @Test
+    void returnLoan_noMatch_false() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
         assertFalse(loanService.returnLoan(u, b));
     }
 
     @Test
-    public void testReturnLoanFailsWhenLoanInactive() {
-        User u = new User("Ali", "a@a.com");
-        Book b = new Book("T1", "A1", "111");
+    void returnLoan_skips_inactive_and_returns_false() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-        loanService.createLoan(u, b);
+        Loan loan = mock(Loan.class);
+        when(loan.getUser()).thenReturn(u);
+        when(loan.getBook()).thenReturn(b);
+        when(loan.isActive()).thenReturn(false);
 
-        Loan loan = loanService.getAllLoans().get(0);
-        loan.returnBook();
+        loanService.getAllLoans().add(loan);
 
         assertFalse(loanService.returnLoan(u, b));
+        verify(u, never()).returnLoan(any());
     }
 
-    // ⭐ NEW BRANCH COVERAGE TESTS ⭐
-
     @Test
-    public void testReturnLoanFailsWhenUserMatchesButBookDiffers() {
-        User u = new User("Ali", "a@a.com");
-        Book b1 = new Book("T1", "A1", "111");
-        Book b2 = new Book("T2", "A2", "222");
+    void returnLoan_userMatches_bookDiffers_false() {
+        User u = mock(User.class);
+        Book b1 = mock(Book.class);
+        Book b2 = mock(Book.class);
 
-        loanService.createLoan(u, b1);
+        Loan loan = mock(Loan.class);
+        when(loan.getUser()).thenReturn(u);
+        when(loan.getBook()).thenReturn(b1);
+        when(loan.isActive()).thenReturn(true);
+
+        loanService.getAllLoans().add(loan);
 
         assertFalse(loanService.returnLoan(u, b2));
     }
 
     @Test
-    public void testReturnLoanFailsWhenBookMatchesButUserDiffers() {
-        User u1 = new User("Ali", "a@a.com");
-        User u2 = new User("Sara", "s@s.com");
-        Book b = new Book("T1", "A1", "111");
+    void returnLoan_bookMatches_userDiffers_false() {
+        User u1 = mock(User.class);
+        User u2 = mock(User.class);
+        Book b = mock(Book.class);
 
-        loanService.createLoan(u1, b);
+        Loan loan = mock(Loan.class);
+        when(loan.getUser()).thenReturn(u1);
+        when(loan.getBook()).thenReturn(b);
+        when(loan.isActive()).thenReturn(true);
+
+        loanService.getAllLoans().add(loan);
 
         assertFalse(loanService.returnLoan(u2, b));
     }
 
-    // ---------------------------------------------------------
-    // LOAD LOANS FROM FILE
-    // ---------------------------------------------------------
-
     @Test
-    public void testLoadLoansFromFile() {
-        userService.addUser("Ahmad", "a@a.com");
-        bookService.addBook("T1", "A1", "111");
+    void returnLoan_success_updates_and_saves() {
+        User u = mock(User.class);
+        Book b = mock(Book.class);
 
-        LocalDate borrow = LocalDate.now().minusDays(3);
-        LocalDate due = LocalDate.now().plusDays(7);
+        Loan loan = mock(Loan.class);
+        when(loan.getUser()).thenReturn(u);
+        when(loan.getBook()).thenReturn(b);
+        when(loan.isActive()).thenReturn(true);
 
-        List<String> lines = new ArrayList<>();
-        lines.add("Ahmad,111," + borrow + "," + due + ",true");
-        lines.add("");
-        FileManager.writeLines("src/main/resources/data/loans.txt", lines);
+        loanService.getAllLoans().add(loan);
 
-        loanService.loadLoansFromFile();
+        try (MockedStatic<FileManager> fm = mockStatic(FileManager.class)) {
+            assertTrue(loanService.returnLoan(u, b));
 
-        List<Loan> loans = loanService.getAllLoans();
-        assertEquals(1, loans.size());
-
-        Loan l = loans.get(0);
-        assertEquals("Ahmad", l.getUser().getUserName());
-        assertEquals("111", l.getBook().getIsbn());
-        assertEquals(due, l.getDueDate());
+            verify(loan, times(1)).returnBook();
+            verify(u, times(1)).returnLoan(loan);
+            fm.verify(() -> FileManager.writeLines(anyString(), anyList()), times(1));
+        }
     }
 
     @Test
-    public void testLoadLoansFromFileIgnoresInactiveLoan() {
-        userService.addUser("Ahmad", "a@a.com");
-        bookService.addBook("T1", "A1", "111");
+    void getOverdueLoans_filters_overdue_only() {
+        Loan overdue = mock(Loan.class);
+        Loan ok = mock(Loan.class);
 
-        LocalDate borrow = LocalDate.now().minusDays(3);
-        LocalDate due = LocalDate.now().minusDays(1);
+        when(overdue.isOverdue()).thenReturn(true);
+        when(ok.isOverdue()).thenReturn(false);
 
-        List<String> lines = new ArrayList<>();
-        lines.add("Ahmad,111," + borrow + "," + due + ",false");
-        FileManager.writeLines("src/main/resources/data/loans.txt", lines);
+        loanService.getAllLoans().add(overdue);
+        loanService.getAllLoans().add(ok);
 
-        loanService.loadLoansFromFile();
+        List<Loan> res = loanService.getOverdueLoans();
 
-        Loan loaded = loanService.getAllLoans().get(0);
-        assertFalse(loaded.isActive()); // inactive
+        assertEquals(1, res.size());
+        assertTrue(res.contains(overdue));
+        assertFalse(res.contains(ok));
     }
 
     @Test
-    public void testLoadLoansFromFileWithInvalidLines() {
-        List<String> lines = new ArrayList<>();
-        lines.add("");
-        lines.add("Ghost,9999,2024-01-01,2024-01-10,false");
-        FileManager.writeLines("src/main/resources/data/loans.txt", lines);
-
-        loanService.loadLoansFromFile();
-
-        assertTrue(loanService.getAllLoans().isEmpty());
-    }
-
-    // ---------------------------------------------------------
-    // OVERDUE
-    // ---------------------------------------------------------
-
-    @Test
-    public void testGetOverdueLoans() {
-        User u = new User("Ali", "a@a.com");
-        Book b1 = new Book("T1", "A1", "111");
-        Book b2 = new Book("T2", "A2", "222");
-
-        loanService.createLoan(u, b1);
-        loanService.createLoan(u, b2);
-
-        List<Loan> all = loanService.getAllLoans();
-        all.get(0).setDueDate(LocalDate.now().minusDays(10));
-        all.get(1).setDueDate(LocalDate.now().plusDays(5));
-
-        List<Loan> overdue = loanService.getOverdueLoans();
-        assertEquals(1, overdue.size());
-    }
-
-    @Test
-    public void testGetOverdueLoansEmpty() {
+    void getOverdueLoans_empty_when_none() {
         assertTrue(loanService.getOverdueLoans().isEmpty());
+    }
+
+    @Test
+    void getAllLoans_returns_live_list() {
+        assertTrue(loanService.getAllLoans().isEmpty());
+        loanService.getAllLoans().add(mock(Loan.class));
+        assertEquals(1, loanService.getAllLoans().size());
     }
 }

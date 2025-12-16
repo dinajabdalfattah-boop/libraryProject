@@ -9,6 +9,8 @@ import service.*;
 import java.util.List;
 import java.util.Scanner;
 
+import notification.EmailNotifier;
+
 public class Main {
 
     private static final Scanner input = new Scanner(System.in);
@@ -30,6 +32,8 @@ public class Main {
         ReminderService reminderService = new ReminderService();
         AdminService adminService = new AdminService();
 
+        reminderService.addObserver(new EmailNotifier());
+
         userService.loadUsersFromFile();
         bookService.loadBooksFromFile();
         cdService.loadCDsFromFile();
@@ -37,20 +41,39 @@ public class Main {
         cdLoanService.loadCDLoansFromFile(cdService.getAllCDs());
         adminService.loadAdminsFromFile();
 
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> saveAll(userService, bookService, cdService, loanService, cdLoanService, adminService)));
+
         System.out.println("\nLoaded all data from files successfully.\n");
 
         LibraryService library = new LibraryService(
                 userService, bookService, loanService, cdLoanService, reminderService
         );
 
-        mainMenu(adminService, library, bookService, cdService, userService);
+        mainMenu(adminService, library, bookService, cdService, userService, loanService, cdLoanService);
+    }
+
+    private static void saveAll(UserService userService,
+                                BookService bookService,
+                                CDService cdService,
+                                LoanService loanService,
+                                CDLoanService cdLoanService,
+                                AdminService adminService) {
+
+        userService.saveUsers();
+        bookService.saveBooksToFile();
+        cdService.saveCDsToFile();
+        loanService.saveAllLoansToFile();
+        cdLoanService.saveAllLoansToFile();
+        adminService.saveAdminsToFile();
     }
 
     private static void mainMenu(AdminService adminService,
                                  LibraryService library,
                                  BookService bookService,
                                  CDService cdService,
-                                 UserService userService) {
+                                 UserService userService,
+                                 LoanService loanService,
+                                 CDLoanService cdLoanService) {
 
         while (true) {
             System.out.println("\n===== WELCOME TO LIBRARY SYSTEM =====");
@@ -63,6 +86,7 @@ public class Main {
             switch (choice) {
                 case 1 -> loginRoleMenu(adminService, library, bookService, cdService, userService);
                 case 2 -> {
+                    saveAll(userService, bookService, cdService, loanService, cdLoanService, adminService);
                     System.out.println("Goodbye!");
                     return;
                 }
