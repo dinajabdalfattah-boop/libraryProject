@@ -3,6 +3,7 @@ package file;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,6 +19,11 @@ public class FileManager {
      */
     private FileManager() {
     }
+
+    /**
+     * Represents a missing value in stored CSV files.
+     */
+    public static final String NULL_LITERAL = "null";
 
     /**
      * Reads all lines from a text file and returns them as a List of strings.
@@ -108,4 +114,52 @@ public class FileManager {
         }
     }
 
+    /**
+     * Parses a boolean value from a string in a strict and safe way.
+     * Null, blank, or the literal "null" are treated as false.
+     *
+     * @param s the string to parse
+     * @return the parsed boolean value, or false for null/blank/"null"
+     */
+    public static boolean parseBooleanStrict(String s) {
+        if (s == null) return false;
+        s = s.trim();
+        if (s.isEmpty() || s.equalsIgnoreCase(NULL_LITERAL)) return false;
+        return Boolean.parseBoolean(s);
+    }
+
+    /**
+     * Parses a LocalDate from a string.
+     * Null, blank, or the literal "null" are treated as null.
+     *
+     * @param s the string to parse
+     * @return the parsed LocalDate, or null for null/blank/"null"
+     */
+    public static LocalDate parseDateOrNull(String s) {
+        if (s == null) return null;
+        s = s.trim();
+        if (s.isEmpty() || s.equalsIgnoreCase(NULL_LITERAL)) return null;
+        return LocalDate.parse(s);
+    }
+
+    /**
+     * Converts a LocalDate into a storable string.
+     *
+     * @param d the date value (nullable)
+     * @return ISO date string, or "null" if the value is null
+     */
+    public static String dateToStringOrNull(LocalDate d) {
+        return d == null ? NULL_LITERAL : d.toString();
+    }
+
+    /**
+     * Safely returns a part from a split array.
+     *
+     * @param parts the split array
+     * @param index required index
+     * @return the element at index if present, otherwise null
+     */
+    public static String getPart(String[] parts, int index) {
+        return parts.length > index ? parts[index] : null;
+    }
 }

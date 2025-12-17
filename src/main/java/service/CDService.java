@@ -16,7 +16,6 @@ public class CDService {
 
     private final List<CD> cds = new ArrayList<>();
     private static final String CD_FILE = "src/main/resources/data/cds.txt";
-    private static final String NULL_LITERAL = "null";
 
     /**
      * Adds a new CD to the system if the given ID is not already used.
@@ -76,12 +75,12 @@ public class CDService {
 
             CD cd = new CD(p[0], p[1], p[2]);
 
-            boolean available = parseBooleanStrict(getPart(p, 3));
+            boolean available = FileManager.parseBooleanStrict(FileManager.getPart(p, 3));
             if (available) {
                 cd.returnCD();
             } else {
-                LocalDate borrow = parseDateOrNull(getPart(p, 4));
-                LocalDate due = parseDateOrNull(getPart(p, 5));
+                LocalDate borrow = FileManager.parseDateOrNull(FileManager.getPart(p, 4));
+                LocalDate due = FileManager.parseDateOrNull(FileManager.getPart(p, 5));
 
                 cd.setBorrowDate(borrow);
                 cd.setDueDate(due);
@@ -160,58 +159,9 @@ public class CDService {
                 artist,
                 id,
                 String.valueOf(available),
-                dateToStringOrNull(borrowDate),
-                dateToStringOrNull(dueDate)
+                FileManager.dateToStringOrNull(borrowDate),
+                FileManager.dateToStringOrNull(dueDate)
         );
-    }
-
-    /**
-     * Converts a LocalDate into a storable string.
-     *
-     * @param d the date value (nullable)
-     * @return ISO date string, or "null" if the value is null
-     */
-    private static String dateToStringOrNull(LocalDate d) {
-        return d == null ? NULL_LITERAL : d.toString();
-    }
-
-    /**
-     * Safely returns a part from a split array.
-     *
-     * @param parts the split array
-     * @param index required index
-     * @return the element at index if present, otherwise null
-     */
-    private static String getPart(String[] parts, int index) {
-        return parts.length > index ? parts[index] : null;
-    }
-
-    /**
-     * Parses a boolean value from a string in a strict and safe way.
-     * Null, blank, or the literal "null" are treated as false.
-     *
-     * @param s the string to parse
-     * @return the parsed boolean value, or false for null/blank/"null"
-     */
-    private boolean parseBooleanStrict(String s) {
-        if (s == null) return false;
-        s = s.trim();
-        if (s.isEmpty() || s.equalsIgnoreCase(NULL_LITERAL)) return false;
-        return Boolean.parseBoolean(s);
-    }
-
-    /**
-     * Parses a LocalDate from a string.
-     * Null, blank, or the literal "null" are treated as null.
-     *
-     * @param s the string to parse
-     * @return the parsed LocalDate, or null for null/blank/"null"
-     */
-    private LocalDate parseDateOrNull(String s) {
-        if (s == null) return null;
-        s = s.trim();
-        if (s.isEmpty() || s.equalsIgnoreCase(NULL_LITERAL)) return null;
-        return LocalDate.parse(s);
     }
 
     /**
