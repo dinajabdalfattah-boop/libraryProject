@@ -64,7 +64,14 @@ public class LoanService {
 
         for (Loan loan : loans) {
             if (!isValidForSave(loan)) continue;
-            lines.add(toCsvLine(loan));
+
+            lines.add(buildCsvLine(
+                    loan.getUser().getUserName(),
+                    loan.getBook().getIsbn(),
+                    loan.getBorrowDate(),
+                    loan.getDueDate(),
+                    loan.isActive()
+            ));
         }
 
         FileManager.writeLines(LOANS_FILE, lines);
@@ -156,26 +163,53 @@ public class LoanService {
      * @return true if valid for saving, false otherwise
      */
     private static boolean isValidForSave(Loan loan) {
-        return loan != null
-                && loan.getUser() != null
-                && loan.getBook() != null
-                && loan.getBorrowDate() != null
-                && loan.getDueDate() != null;
+        return isValidForSave(loan, loan == null ? null : loan.getBook());
     }
 
     /**
-     * Builds a CSV line representing the given loan.
+     * Shared validation used by multiple services to reduce duplication.
      *
-     * @param loan the loan to serialize
-     * @return a CSV line in the format userName,isbn,borrowDate,dueDate,active
+     * @param loan the loan-like object (must not be null)
+     * @param item the borrowed item (Book/CD) (must not be null)
+     * @return true if valid for saving, false otherwise
      */
-    private static String toCsvLine(Loan loan) {
+    static boolean isValidForSave(Object loan, Object item) {
+        if (loan == null) return false;
+
+        if (loan instanceof Loan l) {
+            return l.getUser() != null
+                    && item != null
+                    && l.getBorrowDate() != null
+                    && l.getDueDate() != null;
+        }
+
+        if (loan instanceof domain.CDLoan cl) {
+            return cl.getUser() != null
+                    && item != null
+                    && cl.getBorrowDate() != null
+                    && cl.getDueDate() != null;
+        }
+
+        return false;
+    }
+
+    /**
+     * Builds a CSV line representing a loan record.
+     *
+     * @param userName   the user name
+     * @param itemId     the item identifier (ISBN or CD id)
+     * @param borrowDate the borrow date
+     * @param dueDate    the due date
+     * @param active     whether the loan is active
+     * @return a CSV line in the format userName,itemId,borrowDate,dueDate,active
+     */
+    static String buildCsvLine(String userName, String itemId, LocalDate borrowDate, LocalDate dueDate, boolean active) {
         return String.join(",",
-                loan.getUser().getUserName(),
-                loan.getBook().getIsbn(),
-                loan.getBorrowDate().toString(),
-                loan.getDueDate().toString(),
-                String.valueOf(loan.isActive())
+                userName,
+                itemId,
+                borrowDate.toString(),
+                dueDate.toString(),
+                String.valueOf(active)
         );
     }
 
@@ -213,14 +247,14 @@ public class LoanService {
      * @param p split CSV parts (must have at least 5 elements)
      * @return a LoanRecord instance, or null if parsing fails
      */
-    private static LoanRecord parseLoanRecord(String[] p) {
+    static LoanRecord parseLoanRecord(String[] p) {
         try {
             String userName = p[0];
-            String isbn = p[1];
+            String itemId = p[1];
             LocalDate borrowDate = LocalDate.parse(p[2]);
             LocalDate dueDate = LocalDate.parse(p[3]);
             boolean active = Boolean.parseBoolean(p[4]);
-            return new LoanRecord(userName, isbn, borrowDate, dueDate, active);
+            return new LoanRecord(userName, itemId, borrowDate, dueDate, active);
         } catch (Exception e) {
             return null;
         }
@@ -229,14 +263,14 @@ public class LoanService {
     /**
      * Simple value holder for parsed loan CSV data.
      */
-    private static final class LoanRecord {
-        private final String userName;
-        private final String itemId;
-        private final LocalDate borrowDate;
-        private final LocalDate dueDate;
-        private final boolean active;
+    static final class LoanRecord {
+        final String userName;
+        final String itemId;
+        final LocalDate borrowDate;
+        final LocalDate dueDate;
+        final boolean active;
 
-        private LoanRecord(String userName, String itemId, LocalDate borrowDate, LocalDate dueDate, boolean active) {
+        LoanRecord(String userName, String itemId, LocalDate borrowDate, LocalDate dueDate, boolean active) {
             this.userName = userName;
             this.itemId = itemId;
             this.borrowDate = borrowDate;

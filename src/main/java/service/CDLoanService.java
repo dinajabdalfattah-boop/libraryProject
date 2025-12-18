@@ -88,8 +88,15 @@ public class CDLoanService {
         List<String> lines = new ArrayList<>();
 
         for (CDLoan loan : cdLoans) {
-            if (!isValidForSave(loan)) continue;
-            lines.add(toCsvLine(loan));
+            if (!LoanService.isValidForSave(loan, loan == null ? null : loan.getCD())) continue;
+
+            lines.add(LoanService.buildCsvLine(
+                    loan.getUser().getUserName(),
+                    loan.getCD().getId(),
+                    loan.getBorrowDate(),
+                    loan.getDueDate(),
+                    loan.isActive()
+            ));
         }
 
         FileManager.writeLines(LOANS_FILE, lines);
@@ -114,7 +121,7 @@ public class CDLoanService {
             String[] p = line.split(",");
             if (p.length < 5) continue;
 
-            LoanRecord r = parseLoanRecord(p);
+            LoanService.LoanRecord r = LoanService.parseLoanRecord(p);
             if (r == null) continue;
 
             User user = userService.findUserByName(r.userName);
@@ -159,36 +166,6 @@ public class CDLoanService {
     }
 
     /**
-     * Checks whether a CD loan contains the minimum required fields to be persisted.
-     *
-     * @param loan the CD loan to validate
-     * @return true if valid for saving, false otherwise
-     */
-    private static boolean isValidForSave(CDLoan loan) {
-        return loan != null
-                && loan.getUser() != null
-                && loan.getCD() != null
-                && loan.getBorrowDate() != null
-                && loan.getDueDate() != null;
-    }
-
-    /**
-     * Builds a CSV line representing the given CD loan.
-     *
-     * @param loan the CD loan to serialize
-     * @return a CSV line in the format userName,cdId,borrowDate,dueDate,active
-     */
-    private static String toCsvLine(CDLoan loan) {
-        return String.join(",",
-                loan.getUser().getUserName(),
-                loan.getCD().getId(),
-                loan.getBorrowDate().toString(),
-                loan.getDueDate().toString(),
-                String.valueOf(loan.isActive())
-        );
-    }
-
-    /**
      * Checks whether the given CD loan matches the provided user and CD and is active.
      * This method preserves the original null-safety checks from the previous implementation.
      *
@@ -208,25 +185,6 @@ public class CDLoanService {
         return loanUser.equals(user)
                 && loanCd.equals(cd)
                 && loan.isActive();
-    }
-
-    /**
-     * Parses a CD loan record from the given CSV parts.
-     *
-     * @param p split CSV parts (must have at least 5 elements)
-     * @return a LoanRecord instance, or null if parsing fails
-     */
-    private static LoanRecord parseLoanRecord(String[] p) {
-        try {
-            String userName = p[0];
-            String cdId = p[1];
-            LocalDate borrowDate = LocalDate.parse(p[2]);
-            LocalDate dueDate = LocalDate.parse(p[3]);
-            boolean active = Boolean.parseBoolean(p[4]);
-            return new LoanRecord(userName, cdId, borrowDate, dueDate, active);
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     /**
@@ -262,25 +220,6 @@ public class CDLoanService {
             cd.setDueDate(dueDate);
         } else {
             cd.returnCD();
-        }
-    }
-
-    /**
-     * Simple value holder for parsed CD loan CSV data.
-     */
-    private static final class LoanRecord {
-        private final String userName;
-        private final String itemId;
-        private final LocalDate borrowDate;
-        private final LocalDate dueDate;
-        private final boolean active;
-
-        private LoanRecord(String userName, String itemId, LocalDate borrowDate, LocalDate dueDate, boolean active) {
-            this.userName = userName;
-            this.itemId = itemId;
-            this.borrowDate = borrowDate;
-            this.dueDate = dueDate;
-            this.active = active;
         }
     }
 }
